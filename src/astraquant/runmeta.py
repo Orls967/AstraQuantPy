@@ -25,10 +25,15 @@ def config_digest() -> str:
 
 
 def run_metadata(seed: int) -> dict[str, Any]:
-    """Git commit, dirty flag (tracked files only), config digest and seed."""
+    """Git commit, dirty flag, config digest and seed.
+
+    The dirty flag covers tracked files outside ``reports/``; generated reports
+    are outputs of the pipeline and do not change what a run computes.
+    """
+    status = _git("status", "--porcelain", "--untracked-files=no", "--", ".", ":!reports")
     return {
         "git_commit": _git("rev-parse", "HEAD") or "unknown",
-        "git_dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
+        "git_dirty": bool(status),
         "config_digest": config_digest(),
         "seed": seed,
     }

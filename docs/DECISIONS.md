@@ -244,3 +244,64 @@ Sources: <https://www.ksei.co.id/Announcement/Files/BBRI_RIGHT_20210909_ID.pdf>,
 | ID | Question | Recommendation |
 |---|---|---|
 | Q-17 | Four ex-date returns in the Indonesian data are distorted by Yahoo's hidden rights adjustment. They enter the quarterly labels for BBNI Q4 2010, BMRI Q1 2011, BBRI Q3 2021 and BBTN Q4 2022, any 5/20/60-session label spanning those dates, and trailing features for up to 250 sessions after. Nothing has been changed in the data. | Decide before Milestone 3. Options: (a) keep as is and state the limitation; (b) set labels and features that span the four dates to NaN through a config list, consistent with the Q-13 rule; (c) rebuild the true series from official cum-date closes, which needs IDX data this project does not have. Recommendation: (b). |
+
+## 7. Milestone 2 (Targets and features), 2026-11-12
+
+### 7.1 Decisions
+
+All of these were fixed before any model was run. The dataset report shows
+availability only, no target statistics.
+
+| ID | Decision | Reason |
+|---|---|---|
+| D-21 | Targets and features are computed on the full session grid of each exchange (one row per session, NaN where there is no bar). Windows and horizons are positions on that grid. A value that touches a missing bar is NaN. | User decision Q-13. |
+| D-22 | Daily forward targets: price return over 5, 20, 60 sessions; realised volatility over 20 and 60 sessions = sample std of daily log returns over sessions `t+1..t+h`, times sqrt(252). 252 is used for both markets. | Blueprint 3.2. One annualisation constant keeps the two markets comparable; IDX has about 240 sessions a year, so IDX volatility is overstated by about 2% relative to a 240 convention. |
+| D-23 | Quarterly table: one row per asset per calendar quarter. Origin = `target_start_date` = last session of the previous quarter; `target_end_date` = last session of the quarter; both from the exchange calendar. `q_return` is NaN until the end session has a bar. Features are those of the origin session. | Blueprint 3.1 and 8. |
+| D-24 | Feature set `v1` (19 columns plus `is_id`): `ret_{5,20,60,120,250}`, `rvol_{20,60,120}`, `ma_dist_{50,200}`, `rsi_14`, `drawdown_250`, `rel_volume_20_120`, `mkt_ret_{20,60}`, `mkt_rvol_{20,60}`, `fx_ret_{20,60}`. | Blueprint 7. The blueprint gives no windows for index and FX features; 20 and 60 sessions were chosen to match the secondary horizons. |
+| D-25 | RSI uses simple averages (Cutler), not Wilder's smoothing. | Wilder's form has infinite memory, so one missing bar would affect every later value and D-21 could not be applied. |
+| D-26 | USD/IDR is lagged one business day: an IDX origin on day D reads the `IDR=X` bar dated D-1. Lookup is by exact date; a missing FX bar gives NaN, not an older value. | A Yahoo FX bar dated D closes at the end of the UTC day, after the IDX close on D. Using it would be look-ahead. |
+| D-27 | Index features use the index bar of the same session (`^GSPC` for US, `^JKSE` for Indonesia). FX features are NaN for US names. | Same exchange, same close. |
+| D-28 | No scaler, imputer or other fitted transformation is applied when building the dataset. | CLAUDE.md rule 3; fitting belongs inside the walk-forward training window. |
+| D-29 | Tests use a synthetic panel on the real calendars plus two real excerpts in `tests/fixtures/` (NVDA and BBCA.JK around their splits). No test is skipped in a clean clone. | User request. |
+
+### 7.2 Leakage tests
+
+`tests/leakage/test_no_lookahead.py`:
+
+- Features up to a cut date are bit-for-bit identical after every value after the
+  cut is replaced in every series, and identical to features built from data
+  truncated at the cut.
+- Quarterly features and the start price are unchanged when everything after the
+  origin is replaced, while the label does change.
+- The FX bar dated on the origin is not used.
+- Forward targets depend only on their own window.
+- Removing one bar leaves the session grid and target dates unchanged, blanks
+  exactly the values whose window includes it, and leaves neighbours untouched.
+
+Three deliberate leaks were injected to confirm the tests fail when they should:
+a centred volatility window (3 tests failed), FX lag set to zero (1 failed), and
+forward-filling the session grid (1 failed).
+
+### 7.3 Coverage found (ingest run 20261112T152754Z)
+
+| | US | Indonesia |
+|---|---|---|
+| Quarterly rows with a realised label | 387 | 330 |
+| Of those, with every feature available at the origin | 368 | 173 |
+| Of those, if only features with windows up to 60 sessions were required | 386 | 281 |
+
+- No ended quarter lost its label: every quarter-boundary session has a bar.
+- The Indonesian loss comes from D-21 combined with long windows. A single missing
+  bar blanks `drawdown_250` for 250 sessions and `ma_dist_200` for 200. Indonesian
+  usable rows per year: 0 in 2012 and 2013, 2 to 5 in 2016 to 2019, 20 from 2022.
+- US rows are lost only in the first 250 sessions of each series.
+
+### 7.4 Open questions
+
+| ID | Question | Recommendation |
+|---|---|---|
+| Q-03 | IDX PDFs for 30 Dec 2026 and 31 Mar 2027: still with the user. | Unchanged. |
+| Q-17 | Yahoo's hidden rights adjustment (section 6.3). The four affected quarterly labels are in the dataset, unchanged. | Decide before Milestone 3; recommendation (b) in 6.4. |
+| Q-18 | Under the strict NaN rule only 173 of 330 Indonesian quarterly rows have a complete feature vector, and whole years are empty. Ridge cannot use rows with NaN; LightGBM can. This must be settled before any result is seen, because it changes the training sample. | Options: (a) keep strict and let each model use what it can, which gives Ridge and LightGBM different samples; (b) keep strict and require complete rows for all models, which drops about half of Indonesia; (c) allow a small tolerance for long windows, for example at most 2% missing bars inside a window of 120 sessions or more, computed on available bars; (d) drop the 200- and 250-session features. Recommendation: (c), with the tolerance fixed in config now and the strict rule kept for labels and for windows up to 60. |
+| Q-19 | FX features are NaN for all US rows by design. A pooled Ridge needs a rule for them. | Decide in the Milestone 3 plan: set them to zero for US rows after scaling (the `is_id` indicator already separates the markets). No result depends on it yet. |
+| Q-20 | `rvol_*` targets and features use 252 for both markets (D-22). | Keep, unless you prefer per-market constants. |
