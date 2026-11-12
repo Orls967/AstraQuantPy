@@ -1,0 +1,33 @@
+# Universe. Adding or removing a symbol here must not require code changes.
+# role: target  = one of the names a forecast is published for
+#       context = market or FX series used only as a feature input (Milestone 2)
+
+markets:
+  US:
+    calendar: XNYS          # exchange_calendars code
+    currency: USD
+    timezone: America/New_York
+  ID:
+    calendar: XIDX
+    currency: IDR
+    timezone: Asia/Jakarta
+  FX:
+    calendar: null          # 24h market; weekdays only, no exchange calendar
+    currency: IDR
+    timezone: UTC
+
+assets:
+  - {symbol: NVDA,    name: NVIDIA,                market: US, role: target}
+  - {symbol: AAPL,    name: Apple,                 market: US, role: target}
+  - {symbol: MSFT,    name: Microsoft,             market: US, role: target}
+  - {symbol: GOOGL,   name: Alphabet Class A,      market: US, role: target}
+  - {symbol: AMZN,    name: Amazon,                market: US, role: target}
+  - {symbol: META,    name: Meta Platforms,        market: US, role: target}
+  - {symbol: BBCA.JK, name: Bank Central Asia,     market: ID, role: target}
+  - {symbol: BBRI.JK, name: Bank Rakyat Indonesia, market: ID, role: target}
+  - {symbol: BMRI.JK, name: Bank Mandiri,          market: ID, role: target}
+  - {symbol: BBNI.JK, name: Bank Negara Indonesia, market: ID, role: target}
+  - {symbol: BBTN.JK, name: Bank Tabungan Negara,  market: ID, role: target}
+  - {symbol: ^GSPC,   name: S&P 500 index,         market: US, role: context}
+  - {symbol: ^JKSE,   name: IDX Composite (IHSG),  market: ID, role: context}
+  - {symbol: IDR=X,   name: USD/IDR spot,          market: FX, role: context}

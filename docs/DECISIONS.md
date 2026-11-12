@@ -126,3 +126,44 @@ runtime behaviour; that is tested when each package is first used.
 | Q-10 | Have you reviewed the yfinance / Yahoo terms for personal prototyping use (blueprint 12)? | User action. |
 | Q-11 | Where does the SQLite ledger live? `data/` is gitignored, but the ledger is the frozen deliverable. | Decide in Milestone 4; proposal is `data/ledger/` plus a CSV export of frozen forecasts committed under `reports/`. |
 | Q-12 | LightGBM on macOS may need `brew install libomp` (not installed). | Check at Milestone 3; no action now. |
+
+## 5. Milestone 1 (Data), 2026-11-12
+
+### 5.1 Answers to Milestone 0 questions
+
+The user approved the Milestone 1 plan "with the recommendations in DECISIONS.md".
+
+| ID | Outcome |
+|---|---|
+| Q-01 | v2.0-lean is the blueprint. The v1.0 file stays in `docs/`, untracked; it was not deleted. |
+| Q-02 | Python 3.12 via uv. `pyproject.toml` requires `>=3.12,<3.13` with exact pins. |
+| Q-03 | **Still open.** The user has not confirmed the two IDX PDFs. Supporting evidence from data: for 1 Jan to 12 Nov 2026 the configured official holiday list matches Yahoo bars exactly (no missing and no unexpected sessions). |
+| Q-04 | Accepted as written (price return; IDX from 30 Dec, US from 31 Dec). |
+| Q-05 | `exchange_calendars` plus official XIDX holidays for 2026 and 2027 in `configs/settings.yaml`. Tests pin the four target dates and the 60 / 53 session counts. |
+| Q-06 | Start date 2010-01-01. META starts 2012-05-18 (its listing); nothing is padded. |
+| Q-07 | `^GSPC`, `^JKSE` and `IDR=X` are ingested in Milestone 1. |
+| Q-08 | Disk was still about 4 GB free. `.venv` is 267 MB, `data/` about 7 MB. |
+| Q-09 | Branch renamed to `main`. No remote. |
+| Q-10 | Still a user action (Yahoo terms). |
+| Q-11, Q-12 | Unchanged; due at Milestones 4 and 3. |
+
+### 5.2 Decisions made during Milestone 1
+
+| ID | Decision | Reason |
+|---|---|---|
+| D-14 | The calendar library alone is not used for XIDX. Without overrides it gives 62 sessions in Q1 2027 (official: 53) and 252 in 2026 (official: 239). | Measured; guarded by a test. |
+| D-15 | Raw downloads go to `data/raw/yfinance/<UTC run id>/` with a manifest and are never rewritten. Processed Parquet under `data/processed/` is a derived artifact and is replaced on each run. | Blueprint 6. |
+| D-16 | Bars for a session that had not closed at retrieval time are dropped (`dropped_incomplete`). The cutoff is the last session whose official close is before the retrieval timestamp; for FX, the last weekday before the UTC date. | A partial bar is not a closing price. |
+| D-17 | Zero-volume bars on dates the exchange calendar marks closed are dropped (`dropped_closed_day`). | Yahoo inserts holiday placeholders that repeat the previous close: 53 per IDX bank, all with zero volume and an unchanged close, 2014 to 2019. Keeping them would be a forward-fill across non-trading days (CLAUDE.md rule 7). A bar with volume on a closed day is kept and flagged instead. |
+| D-18 | Validation never repairs. Issues are written to `data/processed/quality_issues.parquet` and summarised in `reports/data_quality.md`. `scripts/ingest.py` exits non-zero on any error-level issue or failed split check. | Blueprint 6. |
+| D-19 | Price-return semantics verified on NVDA 10:1 (2024-06-10) and BBCA.JK 5:1 (2021-10-13): the split is recorded with the right ratio, `Close` is continuous across it, and `Close` differs from `Adj Close` before it. Implied unadjusted prior closes are 1,208.88 USD and 36,600 IDR. | Blueprint 3.1; milestone exit criterion. |
+| D-20 | Jump threshold is 25% close-to-close (`validation.max_abs_daily_return`). | IDX auto-rejection limits reach 25 to 35%; lower values would flag ordinary limit moves. |
+
+### 5.3 New open questions
+
+| ID | Question | Recommendation |
+|---|---|---|
+| Q-13 | Each IDX bank has 22 to 24 zero-volume bars on real sessions. On 21 of those dates all five banks have zero volume and an unchanged close while IHSG moved, so they look like stale provider rows, not true closes (2011 to 2018; a few single-name cases up to 2020). They are currently kept and flagged. | Treat zero-volume bars of target equities as missing (drop in cleaning) before Milestone 2, so no feature or label uses a stale close. |
+| Q-14 | Five XIDX sessions the library marks open have no bar for any Indonesian series: 2022-04-29, 2022-05-04, 2022-05-05, 2022-05-06, 2025-08-18. They look like cuti bersama holidays the library does not know. | Add them to `extra_holidays` once you confirm they were exchange holidays. |
+| Q-15 | `IDR=X` has two decimal-shift bad ticks (close on 2010-11-01 and 2012-02-07 is one tenth of its neighbours), 518 bars where high/low do not bound open/close, and 11 missing weekdays. | Milestone 2 uses only `close` from this series and excludes the two bad ticks through an explicit, documented exclusion list in config. No silent repair. |
+| Q-16 | `exchange_calendars` 4.13.2 triggers a pandas 3.1 deprecation warning (`Series.values` on tz-aware data). Harmless today. | No action; revisit if pandas 4 is ever adopted. |

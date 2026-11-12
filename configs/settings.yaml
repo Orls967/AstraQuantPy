@@ -1,0 +1,77 @@
+seed: 20261112
+
+data:
+  provider: yfinance            # unofficial source, prototyping only
+  start_date: 2010-01-01
+  raw_dir: data/raw
+  processed_dir: data/processed
+  report_path: reports/data_quality.md
+  request_pause_seconds: 1.0
+  max_retries: 3
+
+validation:
+  # A close-to-close move larger than this with no split on the day is flagged.
+  max_abs_daily_return: 0.25
+
+# Known corporate actions used to verify price-return semantics (blueprint 3.1).
+# The provider's Close must be continuous across each of these dates.
+split_checks:
+  - {symbol: NVDA,    date: 2024-06-10, ratio: 10}
+  - {symbol: BBCA.JK, date: 2021-10-13, ratio: 5}
+
+# Target boundaries confirmed in Milestone 0 (docs/DECISIONS.md 2.1).
+# Tests pin the calendar module to these dates.
+targets:
+  q1_2027:
+    XNYS: {start: 2026-12-31, end: 2027-03-31, sessions: 60}
+    XIDX: {start: 2026-12-30, end: 2027-03-31, sessions: 53}
+
+calendars:
+  # Official exchange holidays that the calendar library may not know about.
+  # XIDX 2026: IDX announcement Peng-00171/BEI.POP/09-2025 (239 sessions).
+  # XIDX 2027: IDX announcement Peng-00169/BEI.POP/09-2026 (241 sessions).
+  # Dates were taken from press reports quoting the announcements; see DECISIONS.md.
+  extra_holidays:
+    XIDX:
+      - 2026-01-01
+      - 2026-01-16
+      - 2026-02-16
+      - 2026-02-17
+      - 2026-03-18
+      - 2026-03-19
+      - 2026-03-20
+      - 2026-03-23
+      - 2026-03-24
+      - 2026-04-03
+      - 2026-05-01
+      - 2026-05-14
+      - 2026-05-15
+      - 2026-05-27
+      - 2026-05-28
+      - 2026-06-01
+      - 2026-06-16
+      - 2026-08-17
+      - 2026-08-25
+      - 2026-12-24
+      - 2026-12-25
+      - 2026-12-31
+      - 2027-01-01
+      - 2027-01-05
+      - 2027-02-05
+      - 2027-03-08
+      - 2027-03-09
+      - 2027-03-10
+      - 2027-03-11
+      - 2027-03-12
+      - 2027-03-15
+      - 2027-03-25
+      - 2027-03-26
+      - 2027-05-06
+      - 2027-05-17
+      - 2027-05-18
+      - 2027-05-19
+      - 2027-05-20
+      - 2027-06-01
+      - 2027-08-17
+      - 2027-12-24
+      - 2027-12-31
