@@ -58,6 +58,8 @@ class Settings:
     extra_holidays: dict[str, tuple[date, ...]]
     targets: dict[str, dict[str, dict[str, Any]]]
     exclusions: dict[str, tuple[date, ...]]
+    price_breaks: dict[str, tuple[date, ...]]
+    evaluation: dict[str, Any]
     dataset: dict[str, Any]
     features: dict[str, Any]
     context: dict[str, dict[str, Any]]
@@ -67,6 +69,10 @@ class Settings:
     def excluded_dates(self, symbol: str) -> tuple[date, ...]:
         """Bar dates removed in cleaning for this symbol."""
         return self.exclusions.get(symbol, ())
+
+    def breaks_for(self, symbol: str) -> tuple[date, ...]:
+        """Sessions whose close-to-close return is not trustworthy for this symbol."""
+        return self.price_breaks.get(symbol, ())
 
     def holidays_for(self, calendar: str | None) -> tuple[date, ...]:
         """Official extra holidays configured for a calendar code."""
@@ -113,6 +119,9 @@ def load_settings(path: Path | None = None, root: Path | None = None) -> Setting
     for item in raw.get("exclusions", []):
         exclusions.setdefault(item["symbol"], []).append(item["date"])
     dataset = raw.get("dataset", {})
+    price_breaks: dict[str, list[date]] = {}
+    for item in raw.get("price_breaks", []):
+        price_breaks.setdefault(item["symbol"], []).append(item["date"])
     return Settings(
         seed=int(raw["seed"]),
         provider=data["provider"],
@@ -130,6 +139,8 @@ def load_settings(path: Path | None = None, root: Path | None = None) -> Setting
         },
         targets=raw.get("targets", {}),
         exclusions={symbol: tuple(days) for symbol, days in exclusions.items()},
+        price_breaks={symbol: tuple(days) for symbol, days in price_breaks.items()},
+        evaluation=raw.get("evaluation", {}),
         dataset=dataset,
         features=raw.get("features", {}),
         context=raw.get("context", {}),

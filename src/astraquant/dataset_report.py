@@ -93,15 +93,22 @@ def render_dataset_report(
         .rename(columns={"index": "feature"})
     )
     realised_rows = realised.groupby("market").size().to_dict()
+    yearly = q.assign(year=q["quarter"].str[:4]).groupby(["year", "market"])
     by_year = (
-        q.assign(year=q["quarter"].str[:4])
-        .groupby(["year", "market"])["usable"]
-        .sum()
-        .unstack("market")
+        pd.concat(
+            {
+                "labelled": yearly["realised"].sum().unstack("market"),
+                "labelled and complete": yearly["usable"].sum().unstack("market"),
+            },
+            axis=1,
+        )
         .fillna(0)
         .astype(int)
-        .reset_index()
     )
+    by_year.columns = [f"{market} {kind}" for kind, market in by_year.columns]
+    by_year = by_year[sorted(by_year.columns)].reset_index()
+    totals = by_year.drop(columns="year").sum().to_dict() | {"year": "total"}
+    by_year = pd.concat([by_year, pd.DataFrame([totals])], ignore_index=True)
 
     parts = [
         "# Dataset coverage report",
@@ -115,8 +122,11 @@ def render_dataset_report(
         "- Data through: " + ", ".join(f"{k} {v}" for k, v in manifest["data_through"].items()),
         f"- Rows: daily {len(daily):,}; quarterly {len(quarterly):,}.",
         "- This report shows availability only. No target statistics are shown.",
-        "- Rule: windows and horizons are counted in exchange sessions. A feature or target",
-        "  that touches a missing bar is NaN. Nothing is filled or shifted.",
+        "- Rule: windows and horizons are counted in exchange sessions. Labels and windows",
+        "  shorter than 120 sessions are strict: touching a missing bar gives NaN. Windows of",
+        "  120 sessions or more tolerate 2% missing bars in the middle (both ends must exist)",
+        "  and are computed on the bars that exist. Nothing is filled or shifted.",
+        "- Labels whose window crosses a configured price break are NaN.",
         "",
         "## Session grid per symbol",
         "",
@@ -135,7 +145,7 @@ def render_dataset_report(
         "origin is available; `usable` = both.",
         "",
         _table(per_symbol),
-        "## Usable quarterly rows per year",
+        "## Quarterly rows per year: labelled, and labelled with complete features",
         "",
         _table(by_year),
         "## Ended quarters with no label (a boundary session has no bar)",
@@ -153,9 +163,9 @@ def render_dataset_report(
         "- The 11 names were chosen with hindsight; results carry selection bias.",
         "- Quarterly rows are few and the names are highly correlated.",
         "- Yahoo applies an unrecorded adjustment at rights-issue ex-dates of four Indonesian",
-        "  banks (DECISIONS.md 6.3, Q-17). The affected labels and features are still in this",
-        "  dataset, unchanged.",
-        "- Features for the first 250 sessions of each series are NaN by construction.",
+        "  banks (DECISIONS.md 6.3). Labels crossing the five configured dates are NaN; in",
+        "  features the ex-date return is treated as one missing bar.",
+        "- Long-window features are NaN for the first 250 sessions of each series.",
         "",
     ]
     return "\n".join(parts)

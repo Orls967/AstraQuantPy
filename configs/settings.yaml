@@ -18,9 +18,19 @@ exclusions:
   - {symbol: IDR=X, date: 2010-11-01, reason: "decimal-shift bad tick (close is 1/10 of neighbours)"}
   - {symbol: IDR=X, date: 2012-02-07, reason: "decimal-shift bad tick (close is 1/10 of neighbours)"}
 
+# Sessions whose close-to-close return is not trustworthy: Yahoo applies an unrecorded
+# adjustment at these rights-issue ex-dates (DECISIONS.md 6.3, Q-17). Labels whose
+# window crosses one are NaN. For features the day's return is one missing bar.
+price_breaks:
+  - {symbol: BBNI.JK, date: 2010-12-03, note: "rights issue, Dec 2010; date read from the data"}
+  - {symbol: BMRI.JK, date: 2011-02-08, note: "rights issue, Feb 2011; date read from the data"}
+  - {symbol: BBTN.JK, date: 2012-11-19, note: "rights issue I, ex-date per press (britama.com)"}
+  - {symbol: BBRI.JK, date: 2021-09-08, note: "rights issue, ex-date per KSEI"}
+  - {symbol: BBTN.JK, date: 2022-12-23, note: "rights issue II, ex-date per press"}
+
 # Targets and features (blueprint sections 3 and 7). Fixed before any model results.
 dataset:
-  feature_set_version: v1
+  feature_set_version: v2
   annualisation_sessions: 252
   return_horizons: [5, 20, 60]
   volatility_horizons: [20, 60]
@@ -36,6 +46,9 @@ features:
   relative_volume: {short: 20, long: 120}
   market_windows: [20, 60]     # index return and volatility
   fx_windows: [20, 60]         # USD/IDR change, Indonesian names only
+  # Q-18: windows of min_window sessions or more may miss this share of bars in the
+  # middle of the window (both ends must exist). Shorter windows and all labels are strict.
+  long_window: {min_window: 120, max_missing_share: 0.02}
 
 # Context series per market. Only `close` is read from a context series.
 # fx_lag_business_days: a Yahoo FX bar dated D closes after the IDX close on D,

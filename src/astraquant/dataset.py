@@ -60,6 +60,7 @@ def build_asset_daily(
     bars = prices[asset.symbol]
     sessions = _asset_sessions(asset, bars, settings)
     grid = to_session_grid(bars, sessions)
+    breaks = settings.breaks_for(asset.symbol)
     index_close = to_session_grid(prices[context["index"]], sessions)["close"]
     fx_close = None
     if "fx" in context:
@@ -73,6 +74,7 @@ def build_asset_daily(
         fx_close,
         settings.features,
         int(spec["annualisation_sessions"]),
+        breaks,
     )
     out = pd.DataFrame(index=sessions)
     out["symbol"] = asset.symbol
@@ -84,10 +86,10 @@ def build_asset_daily(
     out["is_id"] = int(asset.market == "ID")
     out = pd.concat([out, features], axis=1)
     for h in spec["return_horizons"]:
-        out[f"fwd_ret_{h}"] = targets.forward_return(grid["close"], h)
+        out[f"fwd_ret_{h}"] = targets.forward_return(grid["close"], h, breaks)
     for h in spec["volatility_horizons"]:
         out[f"fwd_vol_{h}"] = targets.forward_realised_vol(
-            grid["close"], h, int(spec["annualisation_sessions"])
+            grid["close"], h, int(spec["annualisation_sessions"]), breaks
         )
     for h in sorted({*spec["return_horizons"], *spec["volatility_horizons"]}):
         out[f"target_end_date_{h}"] = targets.target_end_date(sessions, h)
@@ -121,7 +123,7 @@ def build_quarterly(daily: pd.DataFrame, assets: list[Asset], settings: Settings
             settings.holidays_for(asset.calendar),
         )
         bounds = bounds[bounds["target_start_date"].isin(own.index)]
-        table = targets.quarterly_returns(own["close"], bounds)
+        table = targets.quarterly_returns(own["close"], bounds, settings.breaks_for(asset.symbol))
         table.insert(0, "symbol", asset.symbol)
         table.insert(1, "market", asset.market)
         table.insert(2, "currency", asset.currency)
