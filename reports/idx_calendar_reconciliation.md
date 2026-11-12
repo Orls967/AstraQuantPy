@@ -1,6 +1,6 @@
 # IDX calendar reconciliation, 2010 to 2025
 
-- Raw run: `20261112T152107Z` (Yahoo Finance via yfinance, unofficial).
+- Raw run: `20261112T152754Z` (Yahoo Finance via yfinance, unofficial).
 - **Library sessions**: `exchange_calendars` XIDX with no overrides.
 - **Calendar sessions**: the library minus the holidays in `configs/settings.yaml`.
   Overrides inside this range: 2022-04-29, 2022-05-04, 2022-05-05, 2022-05-06, 2025-08-18.

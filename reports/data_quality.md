@@ -1,8 +1,8 @@
 # Data-quality report
 
-- Run: `20261112T152107Z` (retrieved 2026-11-12T15:21:07.163852+00:00)
+- Run: `20261112T152754Z` (retrieved 2026-11-12T15:27:54.962863+00:00)
 - Source: yfinance 1.8.0. **Unofficial data, prototyping only.**
-- Git commit: `6dd14ecb2db022b8b9782e237a7efe8a66064ab3` (working tree had uncommitted changes)
+- Git commit: `515580f9b3174098d583301f5d34c12fbfae758b`
 - Config digest: `47128b14d444b416`
 - Price semantics: close = split-adjusted, not dividend-adjusted (auto_adjust=False)
 - Data through: FX 2026-11-11, ID 2026-11-12, US 2026-11-11
