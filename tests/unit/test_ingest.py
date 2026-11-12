@@ -22,7 +22,7 @@ def test_clean_bars_schema_and_exchange_local_dates(us_asset):
     assert list(bars.columns) == PROCESSED_COLUMNS
     assert bars["date"].dt.tz is None
     assert list(bars["date"]) == list(SESSIONS)
-    assert counts == {"dropped_incomplete": 0, "dropped_empty": 0, "dropped_closed_day": 0}
+    assert set(counts.values()) == {0} and len(counts) == 5
     # close stays the provider's Close; Adj Close is kept apart and never substituted.
     assert (bars["close"] != bars["adj_close"]).all()
 

@@ -167,3 +167,80 @@ The user approved the Milestone 1 plan "with the recommendations in DECISIONS.md
 | Q-14 | Five XIDX sessions the library marks open have no bar for any Indonesian series: 2022-04-29, 2022-05-04, 2022-05-05, 2022-05-06, 2025-08-18. They look like cuti bersama holidays the library does not know. | Add them to `extra_holidays` once you confirm they were exchange holidays. |
 | Q-15 | `IDR=X` has two decimal-shift bad ticks (close on 2010-11-01 and 2012-02-07 is one tenth of its neighbours), 518 bars where high/low do not bound open/close, and 11 missing weekdays. | Milestone 2 uses only `close` from this series and excludes the two bad ticks through an explicit, documented exclusion list in config. No silent repair. |
 | Q-16 | `exchange_calendars` 4.13.2 triggers a pandas 3.1 deprecation warning (`Series.values` on tz-aware data). Harmless today. | No action; revisit if pandas 4 is ever adopted. |
+
+## 6. Between Milestones 1 and 2, 2026-11-12
+
+### 6.1 User decisions on the Milestone 1 questions
+
+| ID | Decision | Implemented as |
+|---|---|---|
+| Q-13 | Zero-volume bars of target equities on real sessions are missing data. Horizons are counted in calendar sessions, not rows. A label or feature that touches a missing bar is NaN; nothing is shifted. | `dropped_stale` in cleaning (22 to 24 bars per IDX bank). Targets and features are computed on the full session grid with strict NaN propagation. |
+| Q-14 | Add 2022-04-29, 2022-05-04, 2022-05-05, 2022-05-06 and 2025-08-18 to the XIDX holiday list. | `calendars.extra_holidays` in `configs/settings.yaml`. |
+| Q-15 | Use only `close` from `IDR=X`; exclude the two bad ticks through an explicit list. | `exclusions` in `configs/settings.yaml` (`dropped_excluded` = 2). Features read only `close` from context series. |
+| Q-03 | Still open: the user is checking the two IDX PDFs. | No change. |
+
+### 6.2 IDX calendar reconciliation, 2010 to 2025
+
+Full table: `reports/idx_calendar_reconciliation.md` (script
+`scripts/reconcile_idx_calendar.py`, report only, calendar not changed by it).
+
+- After the five Q-14 dates, the configured calendar has 3,884 sessions in 2010 to
+  2025 and raw `^JKSE` has 3,885 bars. Every calendar session has a `^JKSE` bar.
+- One difference: `^JKSE` has a bar on Fri 2017-12-01, which the calendar marks
+  closed. None of the five banks has a traded bar that day, so it looks like a
+  provider artifact. It is dropped in cleaning (`dropped_closed_day`).
+- Caveat: `^JKSE` from Yahoo is not an official record of trading days. Agreement
+  between the library and Yahoo is not proof that both are right.
+
+### 6.3 Rights issues: Yahoo does adjust for them, without recording an event
+
+The instruction was to record that Yahoo does not adjust for rights issues. The
+data shows the opposite, so this entry records what was found.
+
+Evidence. IDX prices are whole rupiah, and split-adjusted prices of these banks
+are multiples of 0.25. In the Yahoo `Close` series every bar before a certain
+date is a non-tick decimal (for example BBRI 3,554.4841 on 2021-09-07), and
+volume before that date is not a round number either. From that date on, all
+closes are whole numbers. The switch dates are:
+
+| Bank | First unadjusted bar | Share of history that is fractional | Yahoo close-to-close return on that day | Known rights issue |
+|---|---|---|---|---|
+| BBNI.JK | 2010-12-03 | 5.6% | +14.0% | December 2010, exercise price Rp3,100 (press; exact ex-date not found) |
+| BMRI.JK | 2011-02-08 | 6.6% | +0.9% | February 2011 (press; price and exact ex-date not found) |
+| BBRI.JK | 2021-09-08 | 69.4% | +4.9% | Ex-date 2021-09-08 regular market, Rp3,400, about 23 new per 100 old (KSEI) |
+| BBTN.JK | 2022-12-23 | 77.3% | +7.8% | Ex-date 2022-12-23 regular market, Rp1,200, 32,525,443 new per 100,000,000 old (press) |
+| BBCA.JK | none | 0.0% | n/a | none since 2010 |
+
+A BBTN rights issue in late 2012 is also believed to exist (from memory, not
+found in the search); it cannot be seen separately because all BBTN bars before
+2022-12-23 are already fractional.
+
+Conclusions that the data supports:
+
+1. Yahoo back-adjusts `Close` (and volume) before each rights ex-date by an
+   undocumented factor. The `Stock Splits` column records nothing on those dates.
+2. The factor looks wrong for at least BBTN 2022. Press reports put the cum-date
+   price (2022-12-22) at about Rp1,400; Yahoo shows 1,248.21, a factor of about
+   0.89. The theoretical ex-rights factor from the published terms is about 0.965.
+   Yahoo therefore shows +7.8% on the ex-date where the unadjusted move was about
+   -3.9% and a correctly adjusted move would be near -0.4%. The Rp1,400 figure is
+   from one press report and was not verified against official data.
+3. The +14.0% on BBNI 2010-12-03 and +4.9% on BBRI 2021-09-08 fall on the same
+   kind of date and are suspect for the same reason, but there is no official
+   price here to prove it.
+
+What is not known: the true closes on those dates, the factor Yahoo used, and
+whether earlier history contains further hidden adjustments.
+
+Sources: <https://www.ksei.co.id/Announcement/Files/BBRI_RIGHT_20210909_ID.pdf>,
+<https://finansial.bisnis.com/read/20210831/90/1435986/harga-pelaksanaan-ditetapkan-rp3400-ini-jadwal-lengkap-rights-issue-bbri>,
+<https://finansial.bisnis.com/read/20221215/90/1609081/harga-rights-issue-btn-bbtn-rp1200-target-dana-rp413-triliun>,
+<https://market.bisnis.com/read/20221222/7/1611159/hari-ini-cum-date-rights-issue-saham-bbtn-masih-terdiskon>,
+<https://keuangan.kontan.co.id/news/investor-kakap-lokal-minati-rights-issue-bbni-1>,
+<https://market.bisnis.com/read/20110121/190/17732/ihsg-turun-tajam-rights-issue-bank-mandiri-tetap-jalan-terus>.
+
+### 6.4 Open question from 6.3
+
+| ID | Question | Recommendation |
+|---|---|---|
+| Q-17 | Four ex-date returns in the Indonesian data are distorted by Yahoo's hidden rights adjustment. They enter the quarterly labels for BBNI Q4 2010, BMRI Q1 2011, BBRI Q3 2021 and BBTN Q4 2022, any 5/20/60-session label spanning those dates, and trailing features for up to 250 sessions after. Nothing has been changed in the data. | Decide before Milestone 3. Options: (a) keep as is and state the limitation; (b) set labels and features that span the four dates to NaN through a config list, consistent with the Q-13 rule; (c) rebuild the true series from official cum-date closes, which needs IDX data this project does not have. Recommendation: (b). |

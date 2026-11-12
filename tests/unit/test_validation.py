@@ -104,3 +104,28 @@ def test_check_split_passes_for_adjusted_and_fails_for_unadjusted(us_asset):
     assert not check_split(dividend_adjusted, day, 10, 0.25)["passed"]
 
     assert not check_split(bars, day, 4, 0.25)["passed"]
+
+
+def test_zero_volume_bar_on_a_session_is_treated_as_missing_for_targets(us_asset):
+    """Q-13: a stale provider row is dropped, so the session shows up as missing."""
+    raw = make_raw(SESSIONS)
+    raw.iloc[6, raw.columns.get_loc("Volume")] = 0
+    bars, counts = clean_bars(raw, us_asset, CUTOFF, SESSIONS)
+    assert counts["dropped_stale"] == 1 and counts["dropped_closed_day"] == 0
+    assert SESSIONS[6] not in set(bars["date"])
+    assert _checks(bars) == {"missing_session"}
+
+
+def test_zero_volume_is_not_stale_for_context_series(us_asset):
+    from dataclasses import replace
+
+    raw = make_raw(SESSIONS)
+    raw["Volume"] = 0
+    bars, counts = clean_bars(raw, replace(us_asset, role="context"), CUTOFF, SESSIONS)
+    assert counts["dropped_stale"] == 0 and len(bars) == len(SESSIONS)
+
+
+def test_configured_exclusion_drops_only_that_bar(us_asset):
+    bars, counts = clean_bars(make_raw(SESSIONS), us_asset, CUTOFF, SESSIONS, (SESSIONS[3].date(),))
+    assert counts["dropped_excluded"] == 1
+    assert SESSIONS[3] not in set(bars["date"]) and len(bars) == len(SESSIONS) - 1

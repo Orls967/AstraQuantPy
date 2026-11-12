@@ -57,6 +57,16 @@ class Settings:
     split_checks: tuple[SplitCheck, ...]
     extra_holidays: dict[str, tuple[date, ...]]
     targets: dict[str, dict[str, dict[str, Any]]]
+    exclusions: dict[str, tuple[date, ...]]
+    dataset: dict[str, Any]
+    features: dict[str, Any]
+    context: dict[str, dict[str, Any]]
+    dataset_dir: Path
+    dataset_report_path: Path
+
+    def excluded_dates(self, symbol: str) -> tuple[date, ...]:
+        """Bar dates removed in cleaning for this symbol."""
+        return self.exclusions.get(symbol, ())
 
     def holidays_for(self, calendar: str | None) -> tuple[date, ...]:
         """Official extra holidays configured for a calendar code."""
@@ -99,6 +109,10 @@ def load_settings(path: Path | None = None, root: Path | None = None) -> Setting
     raw = _read_yaml(path or CONFIG_DIR / "settings.yaml")
     base = root or REPO_ROOT
     data = raw["data"]
+    exclusions: dict[str, list[date]] = {}
+    for item in raw.get("exclusions", []):
+        exclusions.setdefault(item["symbol"], []).append(item["date"])
+    dataset = raw.get("dataset", {})
     return Settings(
         seed=int(raw["seed"]),
         provider=data["provider"],
@@ -115,4 +129,10 @@ def load_settings(path: Path | None = None, root: Path | None = None) -> Setting
             for code, days in raw.get("calendars", {}).get("extra_holidays", {}).items()
         },
         targets=raw.get("targets", {}),
+        exclusions={symbol: tuple(days) for symbol, days in exclusions.items()},
+        dataset=dataset,
+        features=raw.get("features", {}),
+        context=raw.get("context", {}),
+        dataset_dir=base / dataset.get("dataset_dir", "data/processed/dataset"),
+        dataset_report_path=base / dataset.get("report_path", "reports/dataset_summary.md"),
     )

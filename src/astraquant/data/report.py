@@ -68,8 +68,10 @@ def render_report(result: IngestResult, assets: list[Asset]) -> str:
         "- Data through: " + ", ".join(f"{k} {v}" for k, v in m["data_through"].items()),
         "- Checks flag problems. Nothing is repaired, filled or interpolated.",
         "- Rows dropped in cleaning (counted below): `dropped_incomplete` = session still open",
-        "  at retrieval; `dropped_empty` = no prices; `dropped_closed_day` = zero-volume",
-        "  provider placeholder on a date the exchange calendar marks closed.",
+        "  at retrieval; `dropped_empty` = no prices; `dropped_excluded` = listed under",
+        "  `exclusions` in the config; `dropped_closed_day` = zero-volume provider placeholder",
+        "  on a date the calendar marks closed; `dropped_stale` = zero-volume bar of a target",
+        "  equity on a real session, treated as a missing session.",
         "",
         "## Coverage",
         "",
@@ -138,8 +140,8 @@ def render_report(result: IngestResult, assets: list[Asset]) -> str:
         "- The full list of flagged rows is in `data/processed/quality_issues.parquet`.",
         "- IDX holidays before 2026 come from the calendar library only; see the calendar",
         "  cross-check above for sessions it appears to get wrong.",
-        "- Zero-volume bars on real sessions are kept and flagged. For liquid names they are",
-        "  probably stale provider rows, not true closes.",
+        "- Yahoo records no corporate action for rights issues, so `close` is not adjusted",
+        "  for them (see DECISIONS.md).",
         "",
     ]
     return "\n".join(parts)

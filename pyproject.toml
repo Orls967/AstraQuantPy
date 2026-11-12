@@ -31,10 +31,6 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"
-markers = [
-    "network: needs internet access (deselected by default)",
-    "data: needs ingested data under data/ (skipped when absent)",
-]
 
 [tool.ruff]
 line-length = 100

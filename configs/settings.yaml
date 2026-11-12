@@ -13,6 +13,37 @@ validation:
   # A close-to-close move larger than this with no split on the day is flagged.
   max_abs_daily_return: 0.25
 
+# Bars removed in cleaning for a stated reason (DECISIONS.md Q-15). Raw data keeps them.
+exclusions:
+  - {symbol: IDR=X, date: 2010-11-01, reason: "decimal-shift bad tick (close is 1/10 of neighbours)"}
+  - {symbol: IDR=X, date: 2012-02-07, reason: "decimal-shift bad tick (close is 1/10 of neighbours)"}
+
+# Targets and features (blueprint sections 3 and 7). Fixed before any model results.
+dataset:
+  feature_set_version: v1
+  annualisation_sessions: 252
+  return_horizons: [5, 20, 60]
+  volatility_horizons: [20, 60]
+  dataset_dir: data/processed/dataset
+  report_path: reports/dataset_summary.md
+
+features:
+  return_windows: [5, 20, 60, 120, 250]
+  volatility_windows: [20, 60, 120]
+  ma_windows: [50, 200]
+  rsi_window: 14
+  drawdown_window: 250
+  relative_volume: {short: 20, long: 120}
+  market_windows: [20, 60]     # index return and volatility
+  fx_windows: [20, 60]         # USD/IDR change, Indonesian names only
+
+# Context series per market. Only `close` is read from a context series.
+# fx_lag_business_days: a Yahoo FX bar dated D closes after the IDX close on D,
+# so an IDX origin on D may only use the FX bar of the previous business day.
+context:
+  US: {index: ^GSPC}
+  ID: {index: ^JKSE, fx: IDR=X, fx_lag_business_days: 1}
+
 # Known corporate actions used to verify price-return semantics (blueprint 3.1).
 # The provider's Close must be continuous across each of these dates.
 split_checks:
@@ -31,8 +62,15 @@ calendars:
   # XIDX 2026: IDX announcement Peng-00171/BEI.POP/09-2025 (239 sessions).
   # XIDX 2027: IDX announcement Peng-00169/BEI.POP/09-2026 (241 sessions).
   # Dates were taken from press reports quoting the announcements; see DECISIONS.md.
+  # XIDX 2022 and 2025 entries: sessions the library marks open on which no Indonesian
+  # series has a bar; added on the user's approval (DECISIONS.md Q-14).
   extra_holidays:
     XIDX:
+      - 2022-04-29
+      - 2022-05-04
+      - 2022-05-05
+      - 2022-05-06
+      - 2025-08-18
       - 2026-01-01
       - 2026-01-16
       - 2026-02-16

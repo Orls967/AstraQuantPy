@@ -62,14 +62,23 @@ def clean_bars(
     asset: Asset,
     cutoff: pd.Timestamp,
     sessions: pd.DatetimeIndex | None = None,
+    excluded_dates: tuple = (),
 ) -> tuple[pd.DataFrame, dict[str, int]]:
     """Turn a provider frame into the processed schema.
 
-    Drops three kinds of rows, and counts each: bars after ``cutoff`` (session
-    still open at retrieval), rows with no prices at all, and zero-volume bars
-    on dates the exchange calendar marks closed. The last kind is a provider
-    placeholder that repeats the previous close on a holiday, which would be a
-    forward-fill across a non-trading day. Nothing is filled or interpolated.
+    Rows are dropped, never altered, and every drop is counted:
+
+    - ``dropped_incomplete``: bar after ``cutoff`` (session still open at retrieval).
+    - ``dropped_empty``: no prices at all.
+    - ``dropped_excluded``: date listed under ``exclusions`` in the config.
+    - ``dropped_closed_day``: zero-volume bar on a date the exchange calendar
+      marks closed. Yahoo repeats the previous close on holidays, which would
+      be a forward-fill across a non-trading day.
+    - ``dropped_stale``: zero-volume bar of a target equity on a real session.
+      For liquid names this is a stale provider row, not a close, so the
+      session is treated as missing.
+
+    Nothing is filled or interpolated. A dropped session stays missing.
     """
     frame = raw.rename(columns=COLUMN_MAP).copy()
     index = pd.DatetimeIndex(frame.index)
@@ -78,20 +87,30 @@ def clean_bars(
     frame.insert(0, "date", index.normalize().astype("datetime64[ns]"))
     frame = frame.reset_index(drop=True)
 
-    after_cutoff = frame["date"] > cutoff
-    empty = frame[["open", "high", "low", "close"]].isna().all(axis=1) & ~after_cutoff
-    closed_day = pd.Series(False, index=frame.index)
-    if sessions is not None:
-        closed_day = ~frame["date"].isin(sessions) & (frame["volume"] == 0) & ~after_cutoff & ~empty
-    frame = frame[~after_cutoff & ~empty & ~closed_day].sort_values("date", kind="stable")
+    keep = pd.Series(True, index=frame.index)
+    counts: dict[str, int] = {}
+
+    def drop(name: str, mask: pd.Series) -> None:
+        nonlocal keep
+        hit = mask & keep
+        counts[name] = int(hit.sum())
+        keep = keep & ~hit
+
+    zero_volume = frame["volume"] == 0
+    on_session = frame["date"].isin(sessions) if sessions is not None else None
+    drop("dropped_incomplete", frame["date"] > cutoff)
+    drop("dropped_empty", frame[["open", "high", "low", "close"]].isna().all(axis=1))
+    drop("dropped_excluded", frame["date"].isin(pd.to_datetime(list(excluded_dates))))
+    drop("dropped_closed_day", zero_volume & ~on_session if sessions is not None else ~keep)
+    drop(
+        "dropped_stale",
+        zero_volume & on_session if sessions is not None and asset.role == "target" else ~keep,
+    )
+
+    frame = frame[keep].sort_values("date", kind="stable")
     frame["symbol"] = asset.symbol
     frame["market"] = asset.market
     frame["currency"] = asset.currency
-    counts = {
-        "dropped_incomplete": int(after_cutoff.sum()),
-        "dropped_empty": int(empty.sum()),
-        "dropped_closed_day": int(closed_day.sum()),
-    }
     return frame[PROCESSED_COLUMNS].reset_index(drop=True), counts
 
 
@@ -130,7 +149,11 @@ def run_ingest(
         cutoff = completed_cutoff(asset, now, settings)
         sessions = expected_sessions(asset, settings.start_date, cutoff, settings)
         bars, counts = clean_bars(
-            raw, asset, cutoff, sessions if asset.calendar is not None else None
+            raw,
+            asset,
+            cutoff,
+            sessions if asset.calendar is not None else None,
+            settings.excluded_dates(asset.symbol),
         )
         bars.to_parquet(prices_dir / f"{asset.file_stem}.parquet", index=False)
         cleaned[asset.symbol] = bars
