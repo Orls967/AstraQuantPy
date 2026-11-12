@@ -1,9 +1,9 @@
 # Walk-forward evaluation
 
-- Run 2026-11-12T16:54:04.972571+00:00 on dataset build 2026-11-12T15:37:24.341203+00:00 (feature set `v2`).
+- Run 2026-11-12T17:00:12.835630+00:00 on dataset build 2026-11-12T15:37:24.341203+00:00 (feature set `v2`).
 - Source: yfinance. **Unofficial data, prototyping only.**
-- Git commit: `bc3fd777ac7d6e8a7af5801e5bb4dfc945e802d2`
-- Config digest: `eae98d0a87583711`; seed 20261112.
+- Git commit: `45457b04773e2587ea8f9524ba54ccfc7ee2d6be`
+- Config digest: `5f23c5192cf44029`; seed 20261112.
 - Data through: ID 2026-11-12, US 2026-11-11
 - Protocol: expanding window, yearly test blocks, training labels fully realised before the test block, scaling and tuning inside the training window only (blueprint section 8; details in `docs/DECISIONS.md` section 8).
 
@@ -469,12 +469,12 @@ Selection rule checks:
 
 Pooled metrics:
 
-| model | n | r2_oos | mae | rmse | directional_accuracy |
-|---|---|---|---|---|---|
-| trailing_vol | 1287 | 0.0000 | 0.1091 | 0.1563 | 100.0% |
-| historical_mean | 1287 | 0.1121 | 0.1034 | 0.1473 | 100.0% |
-| ridge | 1287 | 0.3521 | 0.0852 | 0.1258 | 100.0% |
-| lightgbm | 1287 | 0.3260 | 0.0863 | 0.1283 | 100.0% |
+| model | n | r2_oos | mae | rmse |
+|---|---|---|---|---|
+| trailing_vol | 1287 | 0.0000 | 0.1091 | 0.1563 |
+| historical_mean | 1287 | 0.1121 | 0.1034 | 0.1473 |
+| ridge | 1287 | 0.3521 | 0.0852 | 0.1258 |
+| lightgbm | 1287 | 0.3260 | 0.0863 | 0.1283 |
 
 By test year (sum of squared errors; `beats` = lower than the baseline):
 
@@ -494,16 +494,16 @@ By test year (sum of squared errors; `beats` = lower than the baseline):
 
 By market:
 
-| market | model | n | r2_oos | mae | rmse | directional_accuracy |
-|---|---|---|---|---|---|---|
-| ID | trailing_vol | 471 | 0.0000 | 0.0917 | 0.1309 | 100.0% |
-| ID | historical_mean | 471 | -0.0149 | 0.0965 | 0.1319 | 100.0% |
-| ID | ridge | 471 | 0.3379 | 0.0750 | 0.1065 | 100.0% |
-| ID | lightgbm | 471 | 0.3244 | 0.0745 | 0.1076 | 100.0% |
-| US | trailing_vol | 816 | 0.0000 | 0.1191 | 0.1692 | 100.0% |
-| US | historical_mean | 816 | 0.1560 | 0.1074 | 0.1555 | 100.0% |
-| US | ridge | 816 | 0.3570 | 0.0910 | 0.1357 | 100.0% |
-| US | lightgbm | 816 | 0.3265 | 0.0932 | 0.1389 | 100.0% |
+| market | model | n | r2_oos | mae | rmse |
+|---|---|---|---|---|---|
+| ID | trailing_vol | 471 | 0.0000 | 0.0917 | 0.1309 |
+| ID | historical_mean | 471 | -0.0149 | 0.0965 | 0.1319 |
+| ID | ridge | 471 | 0.3379 | 0.0750 | 0.1065 |
+| ID | lightgbm | 471 | 0.3244 | 0.0745 | 0.1076 |
+| US | trailing_vol | 816 | 0.0000 | 0.1191 | 0.1692 |
+| US | historical_mean | 816 | 0.1560 | 0.1074 | 0.1555 |
+| US | ridge | 816 | 0.3570 | 0.0910 | 0.1357 |
+| US | lightgbm | 816 | 0.3265 | 0.0932 | 0.1389 |
 
 80% prediction intervals (quantiles of earlier test years' residuals, per market; coverage is out of sample):
 
@@ -565,12 +565,12 @@ Selection rule checks:
 
 Pooled metrics:
 
-| model | n | r2_oos | mae | rmse | directional_accuracy |
-|---|---|---|---|---|---|
-| trailing_vol | 408 | 0.0000 | 0.0932 | 0.1312 | 100.0% |
-| historical_mean | 408 | 0.1362 | 0.0907 | 0.1219 | 100.0% |
-| ridge | 408 | 0.1609 | 0.0829 | 0.1202 | 100.0% |
-| lightgbm | 408 | 0.2196 | 0.0832 | 0.1159 | 100.0% |
+| model | n | r2_oos | mae | rmse |
+|---|---|---|---|---|
+| trailing_vol | 408 | 0.0000 | 0.0932 | 0.1312 |
+| historical_mean | 408 | 0.1362 | 0.0907 | 0.1219 |
+| ridge | 408 | 0.1609 | 0.0829 | 0.1202 |
+| lightgbm | 408 | 0.2196 | 0.0832 | 0.1159 |
 
 By test year (sum of squared errors; `beats` = lower than the baseline):
 
@@ -590,16 +590,16 @@ By test year (sum of squared errors; `beats` = lower than the baseline):
 
 By market:
 
-| market | model | n | r2_oos | mae | rmse | directional_accuracy |
-|---|---|---|---|---|---|---|
-| ID | trailing_vol | 144 | 0.0000 | 0.0867 | 0.1176 | 100.0% |
-| ID | historical_mean | 144 | 0.0488 | 0.0880 | 0.1147 | 100.0% |
-| ID | ridge | 144 | 0.1710 | 0.0772 | 0.1071 | 100.0% |
-| ID | lightgbm | 144 | 0.2537 | 0.0742 | 0.1016 | 100.0% |
-| US | trailing_vol | 264 | 0.0000 | 0.0967 | 0.1380 | 100.0% |
-| US | historical_mean | 264 | 0.1708 | 0.0921 | 0.1257 | 100.0% |
-| US | ridge | 264 | 0.1569 | 0.0860 | 0.1268 | 100.0% |
-| US | lightgbm | 264 | 0.2061 | 0.0881 | 0.1230 | 100.0% |
+| market | model | n | r2_oos | mae | rmse |
+|---|---|---|---|---|---|
+| ID | trailing_vol | 144 | 0.0000 | 0.0867 | 0.1176 |
+| ID | historical_mean | 144 | 0.0488 | 0.0880 | 0.1147 |
+| ID | ridge | 144 | 0.1710 | 0.0772 | 0.1071 |
+| ID | lightgbm | 144 | 0.2537 | 0.0742 | 0.1016 |
+| US | trailing_vol | 264 | 0.0000 | 0.0967 | 0.1380 |
+| US | historical_mean | 264 | 0.1708 | 0.0921 | 0.1257 |
+| US | ridge | 264 | 0.1569 | 0.0860 | 0.1268 |
+| US | lightgbm | 264 | 0.2061 | 0.0881 | 0.1230 |
 
 80% prediction intervals (quantiles of earlier test years' residuals, per market; coverage is out of sample):
 

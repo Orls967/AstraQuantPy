@@ -47,9 +47,13 @@ def main() -> int:
     intervals = pd.read_parquet(eval_dir / primary / "intervals.parquet")
     meta = run_metadata(settings.seed)
 
-    forecasts = forecast_quarter(
-        quarterly, predictions, evaluation["selection"][primary], assets, settings, quarter
-    )
+    try:
+        forecasts = forecast_quarter(
+            quarterly, predictions, evaluation["selection"][primary], assets, settings, quarter
+        )
+    except ValueError as error:
+        print(f"Not stored:\n  - {error}")
+        return 1
 
     problems = []
     if evaluation["dataset_built_at_utc"] != dataset["built_at_utc"]:
