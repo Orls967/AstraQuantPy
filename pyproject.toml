@@ -25,6 +25,10 @@ dev = [
     "pytest==9.2.0",
     "ruff==0.17.4",
 ]
+# Milestone 5 (optional dashboard). Not needed by the pipeline.
+dashboard = [
+    "streamlit==1.67.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

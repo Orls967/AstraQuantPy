@@ -3,7 +3,7 @@
 Append new entries; do not rewrite history. Each entry has a date and a status
 (`fixed`, `assumption`, `open`). Blueprint = `docs/PROJECT_BLUEPRINT.md` (v2.0-lean).
 
-Last updated: 2026-11-13 (Milestone 4, Report and frozen forecast).
+Last updated: 2026-11-13 (Milestone 5, Dashboard).
 
 ## 1. Fixed decisions (from blueprint and CLAUDE.md)
 
@@ -415,3 +415,14 @@ Milestone 4 plan ("pakai semua saran").
 | ID | Question | Recommendation |
 |---|---|---|
 | Q-24 | Blueprint 3.3 says a forecast made during Q1 is stored "with its remaining horizon". D-49 stores a late full-quarter forecast instead. | Accept D-49. Freeze between the 31 Dec close and the 4 Jan open so the late type is never needed. |
+
+## 10. Milestone 5 (Dashboard, optional), 2026-11-13
+
+| ID | Decision | Reason |
+|---|---|---|
+| Q-24 | Closed: the user accepted D-49 (late runs store a full-quarter forecast under the `_late` target type). | User decision. |
+| D-52 | Streamlit 1.67.0 is an optional extra (`pip install -e ".[dev,dashboard]"`), not a core dependency. The pipeline does not import it. | Blueprint 5 and 9: the dashboard is optional and comes last. |
+| D-53 | The dashboard is read-only. It reads the ledger, the evaluation outputs and the manifests through `astraquant.dashboard_data`; it never ingests, fits a model or writes a forecast. | A viewer must not be able to change the frozen record. |
+| D-54 | Three pages (blueprint 9): forecasts with prediction intervals, evaluation results, data freshness. Every page repeats the limitations. | Blueprint 2 and 9. |
+| D-55 | Until an official run exists the forecast page says so. Rehearsal rows from `data/dry_run/` are shown only behind an explicit switch and under a warning. | A rehearsal must never be mistaken for the forecast. |
+| D-56 | Freshness is measured in exchange sessions: the number of completed sessions after each market's data-through date, from the same calendars as the pipeline. | Calendar days would flag every weekend and holiday. |
