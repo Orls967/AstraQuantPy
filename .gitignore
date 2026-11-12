@@ -1,5 +1,5 @@
 # Data, secrets and environments (never commit)
-data/
+/data/
 .venv/
 .env
 .env.*
@@ -17,7 +17,7 @@ dist/
 htmlcov/
 
 # Model binaries and local databases
-artifacts/
+/artifacts/
 *.pkl
 *.joblib
 *.sqlite

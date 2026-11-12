@@ -40,7 +40,7 @@ def main() -> int:
     provider = YFinanceProvider(settings.max_retries, settings.request_pause_seconds)
     meta = {
         "git_commit": _git("rev-parse", "HEAD") or "unknown",
-        "git_dirty": bool(_git("status", "--porcelain")),
+        "git_dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
         "config_digest": _config_digest(),
         "seed": settings.seed,
     }
