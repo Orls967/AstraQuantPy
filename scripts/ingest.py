@@ -5,30 +5,15 @@ Usage: python scripts/ingest.py
 
 from __future__ import annotations
 
-import hashlib
-import subprocess
 import sys
 
 import pandas as pd
 
-from astraquant.config import CONFIG_DIR, REPO_ROOT, load_assets, load_settings
+from astraquant.config import load_assets, load_settings
 from astraquant.data.ingest import run_ingest
 from astraquant.data.provider import YFinanceProvider
 from astraquant.data.report import render_report
-
-
-def _git(*args: str) -> str:
-    done = subprocess.run(
-        ["git", *args], cwd=REPO_ROOT, capture_output=True, text=True, check=False
-    )
-    return done.stdout.strip()
-
-
-def _config_digest() -> str:
-    digest = hashlib.sha256()
-    for name in ("assets.yaml", "settings.yaml"):
-        digest.update((CONFIG_DIR / name).read_bytes())
-    return digest.hexdigest()[:16]
+from astraquant.runmeta import run_metadata
 
 
 def main() -> int:
@@ -38,12 +23,7 @@ def main() -> int:
     if settings.provider != "yfinance":
         raise SystemExit(f"unsupported provider: {settings.provider}")
     provider = YFinanceProvider(settings.max_retries, settings.request_pause_seconds)
-    meta = {
-        "git_commit": _git("rev-parse", "HEAD") or "unknown",
-        "git_dirty": bool(_git("status", "--porcelain", "--untracked-files=no")),
-        "config_digest": _config_digest(),
-        "seed": settings.seed,
-    }
+    meta = run_metadata(settings.seed)
     result = run_ingest(assets, settings, provider, pd.Timestamp.now(tz="UTC"), meta)
 
     settings.report_path.parent.mkdir(parents=True, exist_ok=True)
