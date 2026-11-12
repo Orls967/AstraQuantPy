@@ -1,0 +1,33 @@
+# Data, secrets and environments (never commit)
+data/
+.venv/
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Model binaries and local databases
+artifacts/
+*.pkl
+*.joblib
+*.sqlite
+*.sqlite3
+*.db
+
+# Notebooks and editors
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
