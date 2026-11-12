@@ -148,7 +148,7 @@ def render_dataset_report(
         "## Quarterly rows per year: labelled, and labelled with complete features",
         "",
         _table(by_year),
-        "## Ended quarters with no label (a boundary session has no bar)",
+        "## Ended quarters with no label (missing boundary bar or price break in the window)",
         "",
         _table(lost),
         "## Realised quarterly rows missing each feature at the origin",
