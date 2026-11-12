@@ -48,9 +48,7 @@ def validate_prices(
         bad = bars[bars[column].isna()]
         found.append(_issues(symbol, "missing_price", "error", bad["date"], f"{column} is NaN"))
         bad = bars[bars[column] <= 0]
-        found.append(
-            _issues(symbol, "non_positive_price", "error", bad["date"], f"{column} <= 0")
-        )
+        found.append(_issues(symbol, "non_positive_price", "error", bad["date"], f"{column} <= 0"))
 
     body_high = bars[["open", "close", "low"]].max(axis=1)
     body_low = bars[["open", "close", "high"]].min(axis=1)

@@ -13,7 +13,8 @@ def _table(frame: pd.DataFrame) -> str:
         return "_None._\n"
     header = "| " + " | ".join(str(c) for c in frame.columns) + " |"
     rule = "|" + "|".join("---" for _ in frame.columns) + "|"
-    body = ["| " + " | ".join(_cell(v) for v in row) + " |" for row in frame.itertuples(index=False)]
+    rows = frame.itertuples(index=False)
+    body = ["| " + " | ".join(_cell(v) for v in row) + " |" for row in rows]
     return "\n".join([header, rule, *body]) + "\n"
 
 

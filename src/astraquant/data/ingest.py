@@ -82,9 +82,7 @@ def clean_bars(
     empty = frame[["open", "high", "low", "close"]].isna().all(axis=1) & ~after_cutoff
     closed_day = pd.Series(False, index=frame.index)
     if sessions is not None:
-        closed_day = (
-            ~frame["date"].isin(sessions) & (frame["volume"] == 0) & ~after_cutoff & ~empty
-        )
+        closed_day = ~frame["date"].isin(sessions) & (frame["volume"] == 0) & ~after_cutoff & ~empty
     frame = frame[~after_cutoff & ~empty & ~closed_day].sort_values("date", kind="stable")
     frame["symbol"] = asset.symbol
     frame["market"] = asset.market
