@@ -3,7 +3,7 @@
 Append new entries; do not rewrite history. Each entry has a date and a status
 (`fixed`, `assumption`, `open`). Blueprint = `docs/PROJECT_BLUEPRINT.md` (v2.0-lean).
 
-Last updated: 2026-11-13 (Milestone 3, Models and walk-forward).
+Last updated: 2026-11-13 (Milestone 4, Report and frozen forecast).
 
 ## 1. Fixed decisions (from blueprint and CLAUDE.md)
 
@@ -380,3 +380,38 @@ Full tables: `reports/evaluation/summary.md` and `results.csv`. Test years 2016 
 | Q-22 | The empirical 80% interval under-covers for US names (72.9%). | Do not tune the interval method on this result. In Milestone 4 build the Q1 2027 interval from all walk-forward residuals as planned and state the measured coverage next to it. |
 | Q-23 | `directional_accuracy` is reported as 100% for volatility targets because volatility is always positive. It carries no information there. | Drop the column for volatility targets in the report (presentation only) if you agree. |
 | Q-11 | Ledger location, due at Milestone 4. | As before: `data/ledger/` plus a CSV export under `reports/`. |
+
+## 9. Milestone 4 (Report and frozen forecast), 2026-11-13
+
+### 9.1 User decisions
+
+The user approved Milestone 3 and accepted every recommendation of the
+Milestone 4 plan ("pakai semua saran").
+
+| ID | Decision |
+|---|---|
+| Q-11 | Ledger at `data/ledger/astraquant.sqlite` (not in Git). Every official run exports the whole ledger to `reports/forecast_ledger.csv`, which is committed and is the frozen record in Git. |
+| Q-21 | D-36 stands: zero return is reported, not selectable. |
+| Q-22 | The interval method is not changed. The measured out-of-sample coverage is printed next to the intervals. |
+| Q-23 | `directional_accuracy` is not reported for volatility targets (presentation only; no metric used for selection changes). |
+| D-43 | The ledger holds only the 11 calendar-quarter price-return forecasts. Volatility forecasts are not published in this version. |
+| D-44 | The forecast uses the evaluated cutoff rule (D-32): the cutoff is the earliest origin of the forecast quarter across exchanges (IDX, 2026-12-30). The US Q4 2026 label ends on 2026-12-31 and is therefore not in the training history, exactly as in every walk-forward fold. |
+| Q-03 | Still open and **required before the freeze**: the user confirms 30 Dec 2026 and 31 Mar 2027 from the two IDX PDFs. |
+
+### 9.2 Implementation decisions
+
+| ID | Decision | Reason |
+|---|---|---|
+| D-45 | Milestone 4 is built and rehearsed now; the official freeze happens after the 2026-12-31 close: `ingest.py`, `build_dataset.py`, `evaluate.py`, then `forecast.py`. | The origin closes do not exist yet. |
+| D-46 | `forecast.py` does not choose a model. It reads the selection stored by `evaluate.py` for the quarterly target and refuses to run if that evaluation was made on a different dataset build or config. | The rule is applied once, mechanically. |
+| D-47 | Point estimate: the selected model fitted on rows with `target_end_date <= cutoff` (for the historical mean: each ticker's mean realised quarterly return, complete feature vector not required). Interval: point estimate plus the 10% and 90% empirical quantiles of the selected model's walk-forward residuals, per market, over all test rows realised by the cutoff. | Blueprint 8; same residual definition as D-40, using every test year. |
+| D-48 | An official run is refused unless: tracked files are clean; every ticker has a bar on its origin session; the origin and end dates equal the dates pinned in `targets.q1_2027`; the evaluation is current (D-46). | Reproducibility and blueprint 3.1. |
+| D-49 | If the dataset already contains a session after an exchange's origin, the run was made during the quarter. Its rows are stored with target type `q1_2027_price_return_late`, not the official type. They still forecast the full-quarter return from the origin close using information up to the origin only; `data_through_date` shows how late the run was. | Blueprint 3.3. A remaining-horizon forecast would need a model that was never evaluated; see Q-24. |
+| D-50 | Append-only is enforced inside SQLite: triggers abort every `UPDATE` and `DELETE` on the forecast and run tables. A repeated run appends new rows with its own run id and timestamp. | CLAUDE.md rule 10. |
+| D-51 | `--dry-run` writes to `data/dry_run/` (its own database and report), never to the ledger, with target type `dry_run_<quarter>_price_return`. `--quarter` is accepted only together with `--dry-run`. | Rehearsal on a quarter whose origin already exists (2026Q4) without creating anything that looks like the deliverable. |
+
+### 9.3 Open question
+
+| ID | Question | Recommendation |
+|---|---|---|
+| Q-24 | Blueprint 3.3 says a forecast made during Q1 is stored "with its remaining horizon". D-49 stores a late full-quarter forecast instead. | Accept D-49. Freeze between the 31 Dec close and the 4 Jan open so the late type is never needed. |

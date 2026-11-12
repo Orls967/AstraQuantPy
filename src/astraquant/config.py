@@ -60,6 +60,7 @@ class Settings:
     exclusions: dict[str, tuple[date, ...]]
     price_breaks: dict[str, tuple[date, ...]]
     evaluation: dict[str, Any]
+    forecast: dict[str, Any]
     dataset: dict[str, Any]
     features: dict[str, Any]
     context: dict[str, dict[str, Any]]
@@ -141,6 +142,7 @@ def load_settings(path: Path | None = None, root: Path | None = None) -> Setting
         exclusions={symbol: tuple(days) for symbol, days in exclusions.items()},
         price_breaks={symbol: tuple(days) for symbol, days in price_breaks.items()},
         evaluation=raw.get("evaluation", {}),
+        forecast=raw.get("forecast", {}),
         dataset=dataset,
         features=raw.get("features", {}),
         context=raw.get("context", {}),

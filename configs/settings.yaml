@@ -149,3 +149,14 @@ evaluation:
     min_prior_test_years: 2      # residuals of at least 2 earlier test years
   output_dir: data/processed/evaluation
   report_dir: reports/evaluation
+
+# Frozen forecast (blueprint 3.3 and section 9, Milestone 4; DECISIONS.md section 9).
+forecast:
+  quarter: 2027Q1
+  target_key: q1_2027                   # pinned dates under `targets`
+  target_type: q1_2027_price_return
+  model_version: "1"
+  ledger_path: data/ledger/astraquant.sqlite
+  export_path: reports/forecast_ledger.csv
+  report_path: reports/q1_2027.md
+  dry_run_dir: data/dry_run

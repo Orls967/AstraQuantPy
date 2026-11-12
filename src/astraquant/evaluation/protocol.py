@@ -48,6 +48,7 @@ class ModelPlan:
     baseline: str
     candidates: list[str]
     reference: str | None  # second baseline, reported only
+    signed: bool = True  # False for targets that are always positive (no direction)
 
     @property
     def names(self) -> list[str]:
@@ -100,7 +101,9 @@ def model_plan(target: TargetSpec, settings: Settings) -> ModelPlan:
         if column not in features:
             raise ValueError(f"{target.name}: no trailing feature {column} for the baseline")
         trailing = ModelSpec("trailing_vol", lambda: TrailingFeatureModel(column))
-        return ModelPlan([trailing, mean, *learned], "trailing_vol", ["ridge", "lightgbm"], None)
+        return ModelPlan(
+            [trailing, mean, *learned], "trailing_vol", ["ridge", "lightgbm"], None, signed=False
+        )
     raise ValueError(f"unknown target kind {target.kind!r}")
 
 
@@ -142,7 +145,12 @@ def evaluate_target(
         int(cfg["min_inner_train_rows"]),
     )
     names = plan.names
-    overall = summarise(predictions, names, plan.baseline, reference=plan.reference)
+
+    def metrics(by: str | None = None) -> pd.DataFrame:
+        table = summarise(predictions, names, plan.baseline, by, plan.reference)
+        return table if plan.signed else table.drop(columns="directional_accuracy")
+
+    overall = metrics()
     yearly = yearly_comparison(predictions, names, plan.baseline)
     level = float(cfg["interval"]["level"])
     intervals = pd.concat(
@@ -157,8 +165,8 @@ def evaluate_target(
         "folds": folds,
         "overall": overall,
         "yearly": yearly,
-        "by_market": summarise(predictions, names, plan.baseline, "market", plan.reference),
-        "by_symbol": summarise(predictions, names, plan.baseline, "symbol", plan.reference),
+        "by_market": metrics("market"),
+        "by_symbol": metrics("symbol"),
         "intervals": intervals,
         "interval_overall": interval_summary(intervals),
         "interval_by_market": interval_summary(intervals, "market"),

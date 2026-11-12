@@ -32,6 +32,7 @@ uv pip install -e ".[dev]"
 python scripts/ingest.py          # download, clean, validate -> data/, reports/data_quality.md
 python scripts/build_dataset.py   # targets and features -> data/processed/dataset/
 python scripts/evaluate.py        # walk-forward evaluation -> reports/evaluation/summary.md
+python scripts/forecast.py        # frozen forecast -> ledger, reports/q1_2027.md (after the last 2026 close)
 ruff check . && pytest            # checks
 ```
 
@@ -52,5 +53,6 @@ ruff check . && pytest            # checks
 
 ## Status
 
-Milestones 0 to 3 (discovery, data, targets and features, models and walk-forward) are
-built. The report and the frozen forecast are Milestone 4. See blueprint section 9.
+Milestones 0 to 3 are built, and the Milestone 4 tooling (ledger, forecast script, report)
+is built and rehearsed. The official Q1 2027 forecast is frozen after the 2026-12-31 close:
+run the four scripts above in order. See blueprint section 9 and `docs/DECISIONS.md` section 9.
