@@ -3,7 +3,7 @@
 Append new entries; do not rewrite history. Each entry has a date and a status
 (`fixed`, `assumption`, `open`). Blueprint = `docs/PROJECT_BLUEPRINT.md` (v2.0-lean).
 
-Last updated: 2026-11-12 (Milestone 0, Discovery).
+Last updated: 2026-11-13 (Milestone 3, Models and walk-forward).
 
 ## 1. Fixed decisions (from blueprint and CLAUDE.md)
 
@@ -305,3 +305,43 @@ forward-filling the session grid (1 failed).
 | Q-18 | Under the strict NaN rule only 173 of 330 Indonesian quarterly rows have a complete feature vector, and whole years are empty. Ridge cannot use rows with NaN; LightGBM can. This must be settled before any result is seen, because it changes the training sample. | Options: (a) keep strict and let each model use what it can, which gives Ridge and LightGBM different samples; (b) keep strict and require complete rows for all models, which drops about half of Indonesia; (c) allow a small tolerance for long windows, for example at most 2% missing bars inside a window of 120 sessions or more, computed on available bars; (d) drop the 200- and 250-session features. Recommendation: (c), with the tolerance fixed in config now and the strict rule kept for labels and for windows up to 60. |
 | Q-19 | FX features are NaN for all US rows by design. A pooled Ridge needs a rule for them. | Decide in the Milestone 3 plan: set them to zero for US rows after scaling (the `is_id` indicator already separates the markets). No result depends on it yet. |
 | Q-20 | `rvol_*` targets and features use 252 for both markets (D-22). | Keep, unless you prefer per-market constants. |
+
+## 8. Milestone 3 (Models and walk-forward), 2026-11-13
+
+Everything in 8.1 to 8.3 was written and committed **before any model was run on
+the real dataset**. Nothing here was chosen after seeing a result.
+
+### 8.1 Earlier questions as implemented
+
+| ID | Outcome |
+|---|---|
+| Q-17 | Option (b), applied in commit `a42ed7e`: `price_breaks` in `configs/settings.yaml` lists five rights-issue ex-dates (the four in 6.3 plus BBTN 2012-11-19). A label whose window crosses one is NaN; in features the ex-date return counts as one missing bar. Five quarterly labels are lost (listed in `reports/dataset_summary.md`). |
+| Q-18 | Option (c), applied in commit `a42ed7e`: windows of 120 sessions or more tolerate 2% missing interior bars (`features.long_window`); labels and shorter windows stay strict. Feature set is `v2`. Rows labelled with a complete feature vector: ID 214 of 325, US 368 of 387. |
+| Q-19 | As recommended: in Ridge the FX features are standardised with the Indonesian training rows only and set to zero for other markets. LightGBM receives them as NaN for US rows. |
+| Q-20 | 252 kept for both markets (no instruction to change it). |
+| Q-12 | `lightgbm==4.7.0` imports and fits in `.venv` without a separate `libomp` install. |
+| Q-03 | Still open (IDX PDFs). Does not affect Milestone 3. |
+
+### 8.2 Protocol details the blueprint leaves open
+
+| ID | Decision | Reason |
+|---|---|---|
+| D-30 | One sample set for all models: a row is used (train or test) only if it has a label and a complete feature vector. "Complete" = every non-FX feature present, and the FX features present for markets that have an FX series. The historical-mean baseline is fitted on every labelled row of the training window, complete or not. | All four models are scored on identical test rows. The mean needs no features, so it keeps the longer history. |
+| D-31 | Test years 2016 to 2026. The first training window is 2011 to 2015. 2026 is a partial block (quarters realised by the data-through date) and counts as one test year in the selection rule. | Five labelled years before the first test; fixed in `evaluation.first_test_year`. |
+| D-32 | Fold cutoff for test year `Y` = the **earlier** of the two exchanges' last sessions of `Y-1`, used for both markets. Training rows need `target_end_date <= cutoff`. | IDX usually closes the year one day before NYSE. With per-market cutoffs a US label ending 31 Dec would train a model that forecasts an IDX origin on 30 Dec. The price is that the last US quarter of `Y-1` is not in the training set of year `Y` (it enters one fold later). |
+| D-33 | Embargo: because a training label must be fully realised by the cutoff, the last training origin is at least `h` sessions before the first test origin, and no training label overlaps the test block. The walk-forward raises if a training label ends after the first test origin. | Blueprint 8. |
+| D-34 | Hyperparameters: for each fold, each of the last 3 years of the training window is predicted from the data before it (same cutoff rule); the grid entry with the lowest summed squared error wins. Ties and folds with no usable inner year take the first grid entry. Grids are in `evaluation.ridge` and `evaluation.lightgbm`: Ridge alpha in {0.1, 1, 10, 100, 1000, 10000}; LightGBM `num_leaves` in {3, 7} x `n_estimators` in {50, 150} with learning rate 0.05, `min_child_samples` 20, `colsample_bytree` 0.8, `reg_lambda` 1. | Small grids for a small sample; tuning never sees the test year. |
+| D-35 | Model inputs: the 19 features of set `v2` plus `is_id`. LightGBM is single-threaded and deterministic with the project seed. | Blueprint 7. |
+| D-36 | Return targets: models are zero, historical mean (per symbol, expanding), Ridge, LightGBM. The baseline of `R2_oos` and of the selection rule is the historical mean. **Only Ridge and LightGBM are candidates** to replace it; the zero-return model is a second baseline and is reported (including `R2` of every model against zero) but cannot be selected. If both candidates qualify, the higher pooled `R2_oos` wins. | Blueprint 8 names the historical mean as the baseline and CLAUDE.md rule 6 treats zero return as a baseline too. This is an interpretation; see Q-21. |
+| D-37 | "Beats the baseline in a test year" = pooled SSE of the model over that year's test rows is strictly lower than the baseline's. | Mechanical form of blueprint 8. |
+| D-38 | Secondary targets are evaluated on **non-overlapping origins**: every `h`-th session of each exchange's session grid counted from the first session on or after `data.start_date`. A row's test year is the year of its origin. | Overlapping daily labels would inflate the sample without adding information and would make the yearly comparison depend on autocorrelated errors. |
+| D-39 | Volatility targets (20 and 60 sessions): models are trailing realised volatility over the same window (baseline), historical mean, Ridge, LightGBM. Target and forecasts are volatility levels, squared error. Candidates are Ridge and LightGBM. | Blueprint 8, last paragraph. |
+| D-40 | Prediction intervals in the evaluation: for test year `Y`, forecast plus the 10% and 90% empirical quantiles of the same model's out-of-sample residuals in test years before `Y`, per market. No interval for the first 2 test years. Coverage and width are reported for the remaining years, so the coverage check is itself out of sample. | Blueprint 8. Residual scale differs between the two markets. |
+| D-41 | The selection rule decides the published model on the **quarterly target only**. Selection output for secondary targets is reported for information. | Blueprint 8: the primary metric is defined on the quarterly target. |
+| D-42 | Outputs: `data/processed/evaluation/` (predictions, folds, intervals per target, `results.json` with run metadata) and `reports/evaluation/summary.md` plus `results.csv`. | Blueprint 9, Milestone 3 exit criteria. |
+
+### 8.3 Open question
+
+| ID | Question | Recommendation |
+|---|---|---|
+| Q-21 | D-36 keeps zero return out of the candidate list. If zero return turns out better than the historical mean, the rule as written still publishes the historical mean. | Keep D-36. The report shows both baselines side by side; changing the published baseline after seeing results would break rule 5. |

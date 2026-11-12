@@ -126,3 +126,26 @@ calendars:
       - 2027-08-17
       - 2027-12-24
       - 2027-12-31
+
+# Evaluation protocol (blueprint section 8). Fixed before any model was run;
+# see DECISIONS.md section 8. Do not change after seeing results.
+evaluation:
+  first_test_year: 2016          # five labelled years (2011 to 2015) before the first test block
+  inner_validation_years: 3      # hyperparameters: the last 3 years of each training window
+  min_inner_train_rows: 30
+  ridge:
+    alphas: [0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0]
+  lightgbm:
+    fixed:
+      learning_rate: 0.05
+      min_child_samples: 20
+      colsample_bytree: 0.8
+      reg_lambda: 1.0
+    grid:
+      num_leaves: [3, 7]
+      n_estimators: [50, 150]
+  interval:
+    level: 0.80
+    min_prior_test_years: 2      # residuals of at least 2 earlier test years
+  output_dir: data/processed/evaluation
+  report_dir: reports/evaluation

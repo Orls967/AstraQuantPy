@@ -31,6 +31,7 @@ uv pip install -e ".[dev]"
 ```bash
 python scripts/ingest.py          # download, clean, validate -> data/, reports/data_quality.md
 python scripts/build_dataset.py   # targets and features -> data/processed/dataset/
+python scripts/evaluate.py        # walk-forward evaluation -> reports/evaluation/summary.md
 ruff check . && pytest            # checks
 ```
 
@@ -44,12 +45,12 @@ ruff check . && pytest            # checks
 | `docs/DECISIONS.md` | Decisions, assumptions and open questions, by milestone. |
 | `docs/archive/` | Superseded v1.0 blueprint, kept for reference only. |
 | `configs/` | Universe, horizons, feature windows, calendars. Nothing is hardcoded. |
-| `src/astraquant/` | Package: calendars, data, targets, features, dataset. |
+| `src/astraquant/` | Package: calendars, data, targets, features, dataset, models, evaluation. |
 | `scripts/` | Pipeline entry points. |
 | `reports/` | Generated reports. |
 | `tests/` | Unit and leakage tests; `tests/fixtures/` holds small real-data excerpts. |
 
 ## Status
 
-Milestones 0 to 2 (discovery, data, targets and features) are built. Models, the report
-and the frozen forecast are Milestones 3 and 4. See blueprint section 9.
+Milestones 0 to 3 (discovery, data, targets and features, models and walk-forward) are
+built. The report and the frozen forecast are Milestone 4. See blueprint section 9.
