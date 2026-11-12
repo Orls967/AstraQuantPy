@@ -345,3 +345,38 @@ the real dataset**. Nothing here was chosen after seeing a result.
 | ID | Question | Recommendation |
 |---|---|---|
 | Q-21 | D-36 keeps zero return out of the candidate list. If zero return turns out better than the historical mean, the rule as written still publishes the historical mean. | Keep D-36. The report shows both baselines side by side; changing the published baseline after seeing results would break rule 5. |
+
+### 8.4 Result (run at commit `bc3fd77`, clean tree, 2026-11-13 local time)
+
+Full tables: `reports/evaluation/summary.md` and `results.csv`. Test years 2016 to
+2026 (11 blocks; 2026 holds three quarters).
+
+| Target | Baseline | Ridge `R2_oos` (years won) | LightGBM `R2_oos` (years won) | Rule outcome |
+|---|---|---|---|---|
+| `q_return` (primary, 408 rows) | historical mean | -0.031 (4 of 11) | -0.102 (3 of 11) | **baseline kept** |
+| `fwd_ret_5` (5,199) | historical mean | -0.005 (4) | -0.034 (5) | baseline |
+| `fwd_ret_20` (1,300) | historical mean | -0.022 (4) | +0.013 (4) | baseline |
+| `fwd_ret_60` (421) | historical mean | -0.031 (4) | -0.149 (2) | baseline |
+| `fwd_vol_20` (1,287) | trailing volatility | +0.352 (11) | +0.326 (11) | Ridge |
+| `fwd_vol_60` (408) | trailing volatility | +0.161 (8) | +0.220 (6) | LightGBM |
+
+- **No model beats the baseline on the quarterly return. The published Q1 2027
+  forecast will be the historical mean with empirical prediction intervals**
+  (D-41). This is the outcome blueprint section 1 calls acceptable and likely.
+- The zero-return model has `R2_oos` -0.105 against the historical mean on the
+  quarterly target (pooled). By market it is the other way round for Indonesia
+  (+0.040) and strongly worse for the US (-0.171). Reported only (D-36, Q-21).
+- Volatility is forecastable relative to trailing volatility, as blueprint 3.2
+  expected. The plain historical mean also beats trailing volatility (+0.112 and
+  +0.136), so part of the gain is mean reversion that any shrinkage would capture.
+- Out-of-sample coverage of the 80% interval for the historical mean on the
+  quarterly target: US 72.9% (210 rows), Indonesia 78.4% (139 rows). The US
+  interval is too narrow by about seven points. See Q-22.
+
+### 8.5 Open questions after the run
+
+| ID | Question | Recommendation |
+|---|---|---|
+| Q-22 | The empirical 80% interval under-covers for US names (72.9%). | Do not tune the interval method on this result. In Milestone 4 build the Q1 2027 interval from all walk-forward residuals as planned and state the measured coverage next to it. |
+| Q-23 | `directional_accuracy` is reported as 100% for volatility targets because volatility is always positive. It carries no information there. | Drop the column for volatility targets in the report (presentation only) if you agree. |
+| Q-11 | Ledger location, due at Milestone 4. | As before: `data/ledger/` plus a CSV export under `reports/`. |
