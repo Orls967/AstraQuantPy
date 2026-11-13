@@ -87,8 +87,15 @@ def join_outcomes(forecasts: pd.DataFrame, outcomes: pd.DataFrame) -> pd.DataFra
     if forecasts.empty or outcomes.empty:
         return pd.DataFrame()
     first = outcomes.sort_values("outcome_id").drop_duplicates("forecast_id")
-    keep = [c for c in first.columns if c not in {"run_id", "target_end_date", "git_commit"}]
-    return forecasts.merge(first[keep], on="forecast_id", how="inner")
+    # Forecast columns keep their names; outcome columns that would clash are renamed.
+    first = first.drop(columns=["target_end_date"]).rename(
+        columns={
+            "run_id": "outcome_run_id",
+            "git_commit": "outcome_git_commit",
+            "data_through_date": "outcome_data_through_date",
+        }
+    )
+    return forecasts.merge(first, on="forecast_id", how="inner", validate="one_to_one")
 
 
 def outcome_summary(joined: pd.DataFrame, by: str | None = None) -> pd.DataFrame:

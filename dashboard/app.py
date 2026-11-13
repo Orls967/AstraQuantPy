@@ -14,7 +14,7 @@ from astraquant.config import load_assets, load_settings
 
 BLUE = "#2a78d6"  # single series colour; identity is carried by axis labels
 MUTED = "#8a8985"
-INK = "#1f1f1e"  # realised outcome marker
+REALISED = "#f08c00"  # realised outcome marker; readable on light and dark themes
 
 SETTINGS = load_settings()
 ASSETS = load_assets()
@@ -59,7 +59,7 @@ def interval_chart(rows: pd.DataFrame) -> alt.LayerChart:
     if "realised_return" in rows.columns:
         layers += (
             alt.Chart(rows)
-            .mark_tick(color=INK, thickness=3, size=22)
+            .mark_tick(color=REALISED, thickness=3, size=22, opacity=1)
             .encode(
                 y=alt.Y("ticker:N", sort=order, title=None),
                 x="realised_return:Q",
@@ -115,7 +115,7 @@ def show_forecast(rows: pd.DataFrame, outcomes: pd.DataFrame | None = None) -> N
     st.caption(
         "Dot: point estimate. Bar: prediction interval from past forecast errors. "
         "Dashed line: zero return. Local currency; do not compare price levels across markets."
-        + (" Dark tick: realised return." if realised else "")
+        + (" Orange tick: realised return." if realised else "")
     )
     if realised:
         summary = data.outcome_summary(rows).iloc[0]

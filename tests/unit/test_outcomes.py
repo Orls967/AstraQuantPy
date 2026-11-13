@@ -141,6 +141,12 @@ def test_join_summary_report_and_csv(conn, tmp_path):
     _record(conn)
     joined = join_outcomes(ledger.read_forecasts(conn), ledger.read_outcomes(conn))
     assert len(joined) == 2 and joined["run_id"].eq("r1").all()  # forecast run id is kept
+    # every forecast column survives the join under its own name
+    assert set(ledger.read_forecasts(conn).columns) <= set(joined.columns)
+    assert not [c for c in joined.columns if c.endswith(("_x", "_y"))]
+    assert joined["outcome_run_id"].eq("o1").all()
+    assert joined["data_through_date"].eq("2026-12-31").all()
+    assert joined["outcome_data_through_date"].eq("2027-03-31").all()
     summary = outcome_summary(joined).iloc[0]
     assert summary["n"] == 2 and summary["inside_interval"] == 1 and summary["coverage"] == 0.5
     assert summary["rmse_zero"] == pytest.approx(np.sqrt((0.10**2 + 0.30**2) / 2))
