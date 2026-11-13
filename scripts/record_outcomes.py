@@ -75,7 +75,7 @@ def main() -> int:
             problems.append("tracked files have uncommitted changes")
         if problems:
             print("Not recorded:")
-            for problem in problems:
+            for problem in dict.fromkeys(problems):  # several runs repeat the same reason
                 print(f"  - {problem}")
             return 1
 

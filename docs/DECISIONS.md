@@ -426,3 +426,79 @@ Milestone 4 plan ("pakai semua saran").
 | D-54 | Three pages (blueprint 9): forecasts with prediction intervals, evaluation results, data freshness. Every page repeats the limitations. | Blueprint 2 and 9. |
 | D-55 | Until an official run exists the forecast page says so. Rehearsal rows from `data/dry_run/` are shown only behind an explicit switch and under a warning. | A rehearsal must never be mistaken for the forecast. |
 | D-56 | Freshness is measured in exchange sessions: the number of completed sessions after each market's data-through date, from the same calendars as the pipeline. | Calendar days would flag every weekend and holiday. |
+
+## 11. Milestone 6 tooling (Outcome tracking) and Yahoo terms, 2026-11-13
+
+### 11.1 Correction to section 8.1 (Q-12)
+
+Section 8.1 says LightGBM runs "without a separate `libomp` install". That is
+wrong. On this machine `import lightgbm` failed with `Library not loaded:
+@rpath/libomp.dylib` until `brew install libomp` was run (libomp 23.1.5 is now
+installed through Homebrew, outside the project folder). LightGBM needs it. The
+step is now in the setup commands of `CLAUDE.md` and `README.md`.
+
+### 11.2 Yahoo terms (Q-10): summary, not legal advice
+
+Read on 2026-11-13: Yahoo Terms of Service
+(<https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html>, page marked "Last
+updated: 1 November 2026") and the legal notice in the yfinance README
+(<https://github.com/ranaroussi/yfinance>). The Yahoo page was read through an
+automated summariser in two parts, so section numbers below should be checked
+against the page before relying on them.
+
+| Topic | What the documents say |
+|---|---|
+| yfinance itself | Not affiliated with or endorsed by Yahoo. Described as a research and educational tool that uses Yahoo's publicly available APIs. It states that the Yahoo Finance API is intended for personal use only and points to Yahoo's terms for the rights to downloaded data. Apache licence (covers the code, not the data). |
+| Commercial use | Section 2(e) and 2(h): the services may not be accessed or reused for a commercial purpose without written permission. |
+| Automated access | Section 2(d)(ix) prohibits collecting data by automated means (robots, scrapers, data-mining tools) without Yahoo's prior permission. Section 2(e) requires access through the interface Yahoo provides. **Downloading with yfinance is automated access, so it sits in tension with this clause even for personal use.** |
+| Redistribution and storage | Section 2(h): no reproduction, sale or distribution without permission. Section 2(d)(x): no database, archive or feed that competes with or substitutes for the service. |
+| Machine learning | Not addressed for user-side modelling. The only AI clause concerns Yahoo's own AI features. |
+| Accuracy | Section 8: services are provided as-is, with no promise of accuracy or reliability. |
+| Indonesia | The first part of the page lists a Singapore entity and Singapore law for Yahoo Finance users in Indonesia; the second part did not show that text again, so this point is unconfirmed. |
+
+How the project relates to these points (facts, for the user's decision):
+
+- Personal, non-commercial research; nothing is sold or published as a data product.
+- `data/` is not in Git, so raw and processed prices are not redistributed.
+- Three things in Git do contain Yahoo-derived prices: `tests/fixtures/prices/`
+  (291 daily bars of NVDA and BBCA.JK), and, once the official runs exist,
+  `reports/forecast_ledger.csv` and `reports/forecast_outcomes.csv` (one start
+  and one end price per stock). The repository has no remote. Pushing it to a
+  public host would publish those prices.
+- Requests are sequential with a one-second pause, 14 symbols per run.
+
+Q-10 stays open: accepting these terms is the user's decision.
+
+### 11.3 Decisions
+
+| ID | Decision | Reason |
+|---|---|---|
+| D-57 | Outcomes live in a third ledger table, `outcomes`, one row per forecast, pointing at `forecast_id`. `UPDATE` and `DELETE` are aborted by triggers, as for forecasts. Recording an outcome never touches a forecast row. | CLAUDE.md rule 10; blueprint Milestone 6 ("recorded next to the frozen forecasts"). |
+| D-58 | The realised return is the `q_return` label of the quarterly dataset for the same boundary sessions, not a separate calculation. | The outcome then has exactly the definition every evaluated label had, including the missing-bar and price-break rules. |
+| D-59 | `record_outcomes.py` records nothing unless every pending forecast can be resolved. It refuses when the quarter has not ended in the data, when the dataset has no quarter with the forecast's boundary sessions (the calendar changed), when the label is NaN, and, for an official run, when tracked files are dirty. | No partial or guessed outcomes. |
+| D-60 | Both prices of the realised return come from the same current data. If the start price now differs from the one stored with the forecast by more than `outcomes.start_price_tolerance` (0.01%), the row is flagged `start_price_changed` and listed in the report; the return is still recorded. | A split during the quarter rescales history, so the stored start price is on the old scale. The return stays right; the flag asks for a manual check. |
+| D-61 | A forecast gets one outcome: a repeated run skips forecasts that already have one. Late official forecasts (`_late` type) get outcomes too. The report covers the first run of the official type, the frozen forecast. | One realised value per forecast; the frozen run is the deliverable. |
+| D-62 | Official runs export `reports/forecast_outcomes.csv` and write `reports/q1_2027_outcome.md`. `--dry-run --quarter Q` works only on the rehearsal ledger in `data/dry_run/`. | Same separation as D-51. |
+| D-63 | The report compares the stored forecast with a zero-return forecast (MAE, RMSE, `1 - SSE/SSE_zero`, sign agreement) and reports interval coverage against the nominal 80%. Its post-mortem lines are generated from the numbers. It states that one quarter of correlated stocks cannot establish calibration or skill. | Blueprint Milestone 6 asks for a short post-mortem; CLAUDE.md rule 7 forbids invented narrative. |
+| D-64 | The dashboard forecast page shows realised returns as a tick on the interval chart, two table columns and three summary figures, once every row of the shown run has an outcome. It remains read-only. | Blueprint Milestone 5 page, extended for Milestone 6. |
+
+### 11.4 Rehearsal
+
+`forecast.py --dry-run --quarter 2026Q3` followed by
+`record_outcomes.py --dry-run --quarter 2026Q3`, both on the rehearsal ledger:
+11 outcomes appended; a second run recorded nothing; a direct SQL `UPDATE` on
+`outcomes` was aborted; `record_outcomes.py --dry-run --quarter 2026Q4` refused
+because the quarter has not ended; the official mode refused because no ledger
+exists yet. The rehearsal forecast was produced today from the current data
+vintage, so its numbers test the pipeline and are not a result of the project.
+
+Re-running `evaluate.py` was required because the config digest changed (new
+`outcomes` section). `reports/evaluation/results.csv` came out byte-identical.
+
+### 11.5 Open questions
+
+| ID | Question | Recommendation |
+|---|---|---|
+| Q-03 | IDX PDFs for 30 Dec 2026 and 31 Mar 2027: required before the freeze. | Unchanged. |
+| Q-10 | Yahoo terms (11.2). | User decision. If the repository is ever made public, decide first whether the fixtures and the two CSV exports may be included. |
+| Q-25 | A rights issue or split during Q1 2027 in one of the 11 names. D-60 flags a changed start price, but a rights issue that Yahoo misadjusts (section 6.3) could also leave the start price unchanged and distort the end of the quarter. | In April 2027, check the corporate actions of the five banks for the quarter by hand before reading their rows. |

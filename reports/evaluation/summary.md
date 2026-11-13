@@ -1,9 +1,9 @@
 # Walk-forward evaluation
 
-- Run 2026-11-12T17:00:12.835630+00:00 on dataset build 2026-11-12T15:37:24.341203+00:00 (feature set `v2`).
+- Run 2026-11-13T06:05:23.471390+00:00 on dataset build 2026-11-12T15:37:24.341203+00:00 (feature set `v2`).
 - Source: yfinance. **Unofficial data, prototyping only.**
-- Git commit: `45457b04773e2587ea8f9524ba54ccfc7ee2d6be`
-- Config digest: `5f23c5192cf44029`; seed 20261112.
+- Git commit: `da7d522dd8afc6080033e68f8b5943b6e1b51385`
+- Config digest: `00ff4ca68d0e17ae`; seed 20261112.
 - Data through: ID 2026-11-12, US 2026-11-11
 - Protocol: expanding window, yearly test blocks, training labels fully realised before the test block, scaling and tuning inside the training window only (blueprint section 8; details in `docs/DECISIONS.md` section 8).
 
