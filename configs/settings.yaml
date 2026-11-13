@@ -160,3 +160,12 @@ forecast:
   export_path: reports/forecast_ledger.csv
   report_path: reports/q1_2027.md
   dry_run_dir: data/dry_run
+
+# Milestone 6: realised results recorded next to the stored forecasts.
+outcomes:
+  report_path: reports/q1_2027_outcome.md
+  export_path: reports/forecast_outcomes.csv
+  # Relative difference between the start price stored with the forecast and the
+  # start price in the data used for the outcome, above which the row is flagged
+  # (for example a stock split during the quarter).
+  start_price_tolerance: 0.0001

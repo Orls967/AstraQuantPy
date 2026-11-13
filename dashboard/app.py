@@ -14,6 +14,7 @@ from astraquant.config import load_assets, load_settings
 
 BLUE = "#2a78d6"  # single series colour; identity is carried by axis labels
 MUTED = "#8a8985"
+INK = "#1f1f1e"  # realised outcome marker
 
 SETTINGS = load_settings()
 ASSETS = load_assets()
@@ -54,12 +55,27 @@ def interval_chart(rows: pd.DataFrame) -> alt.LayerChart:
         .mark_rule(color=MUTED, strokeDash=[4, 4])
         .encode(x="x:Q")
     )
-    return (zero + span + point).properties(height=34 * len(rows) + 40)
+    layers = zero + span + point
+    if "realised_return" in rows.columns:
+        layers += (
+            alt.Chart(rows)
+            .mark_tick(color=INK, thickness=3, size=22)
+            .encode(
+                y=alt.Y("ticker:N", sort=order, title=None),
+                x="realised_return:Q",
+                tooltip=[
+                    alt.Tooltip("ticker:N", title="Ticker"),
+                    alt.Tooltip("realised_return:Q", title="Realised", format="+.1%"),
+                    alt.Tooltip("error:Q", title="Realised minus forecast", format="+.1%"),
+                ],
+            )
+        )
+    return layers.properties(height=34 * len(rows) + 40)
 
 
 def forecast_table(rows: pd.DataFrame) -> pd.DataFrame:
-    """Forecast rows formatted for reading."""
-    return pd.DataFrame(
+    """Forecast rows formatted for reading, with the realised outcome when recorded."""
+    out = pd.DataFrame(
         {
             "Ticker": rows["ticker"],
             "Currency": rows["currency"],
@@ -73,10 +89,18 @@ def forecast_table(rows: pd.DataFrame) -> pd.DataFrame:
             "Data through": rows["data_through_date"],
         }
     )
+    if "realised_return" in rows.columns:
+        out.insert(8, "Realised", rows["realised_return"].map("{:+.1%}".format))
+        out.insert(9, "Inside interval", rows["inside_interval"].map({1: "yes", 0: "no"}))
+    return out
 
 
-def show_forecast(rows: pd.DataFrame) -> None:
-    """Chart and table for the rows of one run."""
+def show_forecast(rows: pd.DataFrame, outcomes: pd.DataFrame | None = None) -> None:
+    """Chart and table for the rows of one run, with realised outcomes if recorded."""
+    joined = data.join_outcomes(rows, outcomes) if outcomes is not None else pd.DataFrame()
+    realised = len(joined) == len(rows) and not joined.empty
+    if realised:
+        rows = joined
     first = rows.iloc[0]
     level = float(first["interval_level"])
     left, middle, right = st.columns(3)
@@ -91,7 +115,19 @@ def show_forecast(rows: pd.DataFrame) -> None:
     st.caption(
         "Dot: point estimate. Bar: prediction interval from past forecast errors. "
         "Dashed line: zero return. Local currency; do not compare price levels across markets."
+        + (" Dark tick: realised return." if realised else "")
     )
+    if realised:
+        summary = data.outcome_summary(rows).iloc[0]
+        a, b, c = st.columns(3)
+        a.metric(
+            "Inside the interval",
+            f"{int(summary['inside_interval'])} of {int(summary['n'])}",
+            help=f"Nominal level {level:.0%}. One quarter of correlated stocks says little "
+            "about calibration.",
+        )
+        b.metric("RMSE of the forecast", f"{summary['rmse_forecast']:.1%}")
+        c.metric("RMSE of a zero-return forecast", f"{summary['rmse_zero']:.1%}")
     for exchange, part in rows.groupby("exchange", sort=False):
         st.markdown(f"**{exchange}** ({part['currency'].iloc[0]})")
         st.altair_chart(interval_chart(part), width="stretch")
@@ -114,7 +150,7 @@ def page_forecasts() -> None:
         )
     else:
         st.success("Frozen forecast from the append-only ledger. These rows cannot change.")
-        show_forecast(frozen)
+        show_forecast(frozen, data.load_outcomes(SETTINGS))
         with st.expander("All runs in the ledger"):
             st.dataframe(data.run_summary(stored), hide_index=True, width="stretch")
 
@@ -125,7 +161,7 @@ def page_forecasts() -> None:
             "Not a forecast and not in the ledger. Do not use these numbers."
         )
         latest = rehearsal[rehearsal["run_id"] == rehearsal["run_id"].max()]
-        show_forecast(latest.reset_index(drop=True))
+        show_forecast(latest.reset_index(drop=True), data.load_outcomes(SETTINGS, rehearsal=True))
 
 
 def r2_chart(overall: pd.DataFrame, baseline: str) -> alt.LayerChart:

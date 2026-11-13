@@ -17,6 +17,9 @@ from astraquant import calendars
 from astraquant.config import REPO_ROOT, Asset, Settings
 from astraquant.evaluation.intervals import interval_summary
 from astraquant.evaluation.metrics import summarise, yearly_comparison
+from astraquant.outcomes import join_outcomes, outcome_summary
+
+__all__ = ["join_outcomes", "outcome_summary"]
 
 LIMITATIONS = [
     "The 11 names were chosen with hindsight; results carry selection bias and do not "
@@ -41,6 +44,30 @@ def read_ledger(path: Path) -> pd.DataFrame:
         return pd.read_sql_query("SELECT * FROM forecasts ORDER BY forecast_id", conn)
     finally:
         conn.close()
+
+
+def read_outcomes(path: Path) -> pd.DataFrame:
+    """All recorded outcomes in a ledger file, opened read-only.
+
+    Empty if the file is absent or was created before outcomes existed.
+    """
+    if not path.exists():
+        return pd.DataFrame()
+    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    try:
+        return pd.read_sql_query("SELECT * FROM outcomes ORDER BY outcome_id", conn)
+    except pd.errors.DatabaseError:
+        return pd.DataFrame()
+    finally:
+        conn.close()
+
+
+def load_outcomes(settings: Settings, rehearsal: bool = False) -> pd.DataFrame:
+    """Recorded outcomes from the ledger, or from the rehearsal database."""
+    cfg = settings.forecast
+    if rehearsal:
+        return read_outcomes(REPO_ROOT / cfg["dry_run_dir"] / "ledger.sqlite")
+    return read_outcomes(REPO_ROOT / cfg["ledger_path"])
 
 
 def load_forecasts(settings: Settings, rehearsal: bool = False) -> pd.DataFrame:

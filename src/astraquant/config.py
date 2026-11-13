@@ -61,6 +61,7 @@ class Settings:
     price_breaks: dict[str, tuple[date, ...]]
     evaluation: dict[str, Any]
     forecast: dict[str, Any]
+    outcomes: dict[str, Any]
     dataset: dict[str, Any]
     features: dict[str, Any]
     context: dict[str, dict[str, Any]]
@@ -143,6 +144,7 @@ def load_settings(path: Path | None = None, root: Path | None = None) -> Setting
         price_breaks={symbol: tuple(days) for symbol, days in price_breaks.items()},
         evaluation=raw.get("evaluation", {}),
         forecast=raw.get("forecast", {}),
+        outcomes=raw.get("outcomes", {}),
         dataset=dataset,
         features=raw.get("features", {}),
         context=raw.get("context", {}),
