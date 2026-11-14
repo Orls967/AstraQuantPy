@@ -131,7 +131,7 @@ def show_forecast(rows: pd.DataFrame, outcomes: pd.DataFrame | None = None) -> N
     for exchange, part in rows.groupby("exchange", sort=False):
         st.markdown(f"**{exchange}** ({part['currency'].iloc[0]})")
         st.altair_chart(interval_chart(part), width="stretch")
-    st.dataframe(forecast_table(rows), hide_index=True, width="stretch")
+    st.dataframe(forecast_table(rows), hide_index=True, width="stretch", height="content")
 
 
 def page_forecasts() -> None:
@@ -152,7 +152,9 @@ def page_forecasts() -> None:
         st.success("Frozen forecast from the append-only ledger. These rows cannot change.")
         show_forecast(frozen, data.load_outcomes(SETTINGS))
         with st.expander("All runs in the ledger"):
-            st.dataframe(data.run_summary(stored), hide_index=True, width="stretch")
+            st.dataframe(
+                data.run_summary(stored), hide_index=True, width="stretch", height="content"
+            )
 
     rehearsal = data.load_forecasts(SETTINGS, rehearsal=True)
     if not rehearsal.empty and st.toggle("Show the latest rehearsal run (not a forecast)"):
@@ -221,19 +223,19 @@ def page_evaluation() -> None:
         "R2 out of sample is above zero and it beats the baseline in more than half of the "
         "test years."
     )
-    st.dataframe(tables["checks"], hide_index=True, width="stretch")
+    st.dataframe(tables["checks"], hide_index=True, width="stretch", height="content")
 
     st.subheader("Pooled out-of-sample R2")
     st.caption("Above zero is better than the baseline; below zero is worse.")
     st.altair_chart(r2_chart(tables["overall"], baseline), width="stretch")
-    st.dataframe(tables["overall"], hide_index=True, width="stretch")
+    st.dataframe(tables["overall"], hide_index=True, width="stretch", height="content")
 
     st.subheader("By test year")
     st.caption("Sum of squared errors per year. A model beats the baseline when its sum is lower.")
-    st.dataframe(tables["yearly"], hide_index=True, width="stretch")
+    st.dataframe(tables["yearly"], hide_index=True, width="stretch", height="content")
 
     st.subheader("By market")
-    st.dataframe(tables["by_market"], hide_index=True, width="stretch")
+    st.dataframe(tables["by_market"], hide_index=True, width="stretch", height="content")
 
     level = float(evaluation["evaluation_spec"]["interval"]["level"])
     st.subheader(f"{level:.0%} prediction interval coverage, out of sample")
@@ -243,10 +245,10 @@ def page_evaluation() -> None:
     )
     coverage = tables["coverage"].copy()
     coverage["coverage"] = coverage["coverage"].map("{:.1%}".format)
-    st.dataframe(coverage, hide_index=True, width="stretch")
+    st.dataframe(coverage, hide_index=True, width="stretch", height="content")
 
     with st.expander("Folds and chosen hyperparameters"):
-        st.dataframe(tables["folds"], hide_index=True, width="stretch")
+        st.dataframe(tables["folds"], hide_index=True, width="stretch", height="content")
     st.caption(
         f"Evaluation run {evaluation['run_at_utc'][:19]} UTC · commit "
         f"`{evaluation['git_commit'][:7]}` · config `{evaluation['config_digest']}`"
@@ -268,7 +270,7 @@ def page_freshness() -> None:
         column.metric(
             f"{row.market} data through",
             row.data_through.date().isoformat(),
-            "up to date" if behind == 0 else f"{behind} sessions behind",
+            "up to date" if behind == 0 else f"{behind} session{'' if behind == 1 else 's'} behind",
             delta_color="off" if behind == 0 else "inverse",
             delta_arrow="off",
         )
@@ -279,11 +281,11 @@ def page_freshness() -> None:
     shown = fresh.copy()
     for name in ("data_through", "last_completed_session"):
         shown[name] = shown[name].dt.date.astype(str)
-    st.dataframe(shown, hide_index=True, width="stretch")
+    st.dataframe(shown, hide_index=True, width="stretch", height="content")
 
     st.subheader("Pipeline stages")
     status = data.pipeline_status(SETTINGS)
-    st.dataframe(status, hide_index=True, width="stretch")
+    st.dataframe(status, hide_index=True, width="stretch", height="content")
     digests = set(status.loc[status["stage"].isin(["evaluation"]), "config_digest"])
     st.caption(
         "The forecast script refuses to run unless the evaluation was made on the current "
@@ -292,7 +294,7 @@ def page_freshness() -> None:
 
     st.subheader("Data-quality issues from the last ingest")
     st.caption("Issues are flagged, never repaired. Details: `reports/data_quality.md`.")
-    st.dataframe(data.quality_summary(SETTINGS), hide_index=True, width="stretch")
+    st.dataframe(data.quality_summary(SETTINGS), hide_index=True, width="stretch", height="content")
 
 
 st.set_page_config(page_title="AstraQuant", layout="wide")

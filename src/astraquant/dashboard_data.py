@@ -118,9 +118,11 @@ def evaluation_tables(settings: Settings, target: str, selection: dict[str, Any]
     intervals = pd.read_parquet(base / "intervals.parquet")
     names = [c.removeprefix("pred_") for c in predictions.columns if c.startswith("pred_")]
     baseline = selection["baseline"]
+    # Volatility is always positive, so direction carries no information (DECISIONS Q-23).
+    unsigned = ["directional_accuracy"] if target.startswith("fwd_vol_") else []
     return {
-        "overall": summarise(predictions, names, baseline).drop(columns="group"),
-        "by_market": summarise(predictions, names, baseline, "market"),
+        "overall": summarise(predictions, names, baseline).drop(columns=["group", *unsigned]),
+        "by_market": summarise(predictions, names, baseline, "market").drop(columns=unsigned),
         "yearly": yearly_comparison(predictions, names, baseline),
         "coverage": interval_summary(intervals, "market"),
         "folds": pd.read_parquet(base / "folds.parquet"),

@@ -85,3 +85,33 @@ def test_the_app_renders_its_default_page_without_an_exception():
     app.run()
     assert not app.exception
     assert app.title[0].value == "Q1 2027 forecast"
+
+
+def test_volatility_tables_omit_directional_accuracy(tmp_path, settings):
+    from dataclasses import replace
+
+    base = tmp_path / "evaluation"
+    for target in ("fwd_vol_20", "fwd_ret_20"):
+        folder = base / target
+        folder.mkdir(parents=True)
+        predictions = pd.DataFrame(
+            {
+                "symbol": ["A", "B"],
+                "market": ["US", "ID"],
+                "test_year": [2020, 2020],
+                "y": [0.2, 0.3],
+                "pred_base": [0.25, 0.25],
+                "pred_m": [0.2, 0.31],
+            }
+        )
+        predictions.to_parquet(folder / "predictions.parquet")
+        intervals = predictions[["market", "y"]].assign(model="m", lower=0.0, upper=1.0)
+        intervals.to_parquet(folder / "intervals.parquet")
+        pd.DataFrame({"test_year": [2020]}).to_parquet(folder / "folds.parquet")
+    local = replace(settings, evaluation={**settings.evaluation, "output_dir": str(base)})
+    selection = {"baseline": "base", "checks": []}
+    vol = data.evaluation_tables(local, "fwd_vol_20", selection)
+    ret = data.evaluation_tables(local, "fwd_ret_20", selection)
+    assert "directional_accuracy" not in vol["overall"].columns
+    assert "directional_accuracy" not in vol["by_market"].columns
+    assert "directional_accuracy" in ret["overall"].columns
